@@ -1,0 +1,9 @@
+owslib
+
+# Not python3-compatible
+#gsconfig
+
+# This one should be, see https://github.com/boundlessgeo/gsconfig/issues/98#issuecomment-185063984
+#gsconfig-py3
+
+
