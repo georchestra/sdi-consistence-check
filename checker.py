@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os, sys
 from owslib.wms import WebMapService
 from owslib.iso import MD_Metadata
 from owslib.util import openURL
@@ -80,13 +81,17 @@ class MetadataMissingInconsistency(Inconsistency):
 
 
 if __name__ == "__main__":
-    pigma = OwsServer("https://www.pigma.org/geoserver/wms")
+    wms_service_url = os.getenv('WMS_SERVICE')
+    if not wms_service_url:
+        sys.exit("Missing WMS_SERVICE environment variable")
+    print("Querying %s ..." % wms_service_url)
+    service = OwsServer(wms_service_url)
     inconsistencies = []
 
-    for workspace, layers in pigma.layersByWorkspace.items():
+    for workspace, layers in service.layersByWorkspace.items():
         for layer in layers:
             fqLayerName = "%s:%s" % (workspace, layer)
-            mdUrls = pigma.getMetadataUrls(fqLayerName)
+            mdUrls = service.getMetadataUrls(fqLayerName)
             if len(mdUrls) == 0:
                 inconsistencies.append(MetadataMissingInconsistency(fqLayerName))
                 continue
@@ -95,7 +100,7 @@ if __name__ == "__main__":
                 if gmd.errorMsg is not None:
                     inconsistencies.append(MetadataInconsistency(fqLayerName, mdUrl))
     print("Finished integrity check against WMS GetCapabilities")
-    totalLayers = sum(len(v) for k,v in pigma.layersByWorkspace.items())
+    totalLayers = sum(len(v) for k,v in service.layersByWorkspace.items())
     print("%d layers parsed" % totalLayers)
     print("%d inconsistencies found" % len(inconsistencies))
 

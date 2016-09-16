@@ -8,5 +8,5 @@ cd sdi-consistence-check && docker build -t georchestra/sdi-consistence-check .
 
 Run:
 ```
-docker run -it --rm georchestra/sdi-consistence-check
+docker run -e WMS_SERVICE='https://sdi.georchestra.org/geoserver/wms' -it --rm georchestra/sdi-consistence-check
 ```
