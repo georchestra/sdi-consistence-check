@@ -10,3 +10,5 @@ Run:
 ```
 docker run -e WMS_SERVICE='https://sdi.georchestra.org/geoserver/wms' -it --rm georchestra/sdi-consistence-check
 ```
+
+Work sponsored by [Service de l'Information Géographique de Rennes Métropole](https://github.com/sigrennesmetropole/)
