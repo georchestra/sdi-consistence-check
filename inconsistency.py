@@ -1,4 +1,4 @@
-class Inconsistency:
+class Inconsistency(BaseException):
     pass
 
 
@@ -12,6 +12,9 @@ class LayerNotFoundInconsistency(Inconsistency):
         self.layer_name = layer_name
         self.md_uuid = md_uuid
         self.msg = msg
+
+    def set_md_uuid(self, uuid):
+        self.md_uuid = uuid
 
     def __str__(self):
         return "Metadata %s reference a layer : %s on %s that does not exists (%s)" \
