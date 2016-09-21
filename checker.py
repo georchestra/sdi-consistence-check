@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 
 import os, sys
+
+from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
 from owslib.iso import MD_Metadata
 from owslib.util import openURL
 import xml.etree.ElementTree as etree
-
 from requests import HTTPError
+
+from inconsistency import MetadataInvalidInconsistency, MetadataMissingInconsistency
 
 
 class OwsServer:
-
-    def __init__(self, gsUrl):
-        self._wms = WebMapService(gsUrl)
+    """
+    Class which manages the consumption of OWS servers (WMS,WFS)
+    """
+    def __init__(self, gsurl, wms=True):
+        if wms:
+            self._ows = WebMapService(gsurl)
+        else:
+            self._ows = WebFeatureService(gsurl)
         self.populateLayers()
 
 
     def populateLayers(self):
         self.layersByWorkspace = {}
-        for content in self._wms.contents:
+        for content in self._ows.contents:
             # if the workspace is not guessable from the layer name,
             # skip it.
             try:
@@ -32,7 +40,7 @@ class OwsServer:
 
 
     def getMetadataUrls(self, layerName):
-        l = self._wms[layerName]
+        l = self._ows[layerName]
         return set([ i['url'] for i in l.metadataUrls ])
 
 
@@ -58,34 +66,13 @@ class GeoMetadata:
         return self.md
 
 
-class Inconsistency:
-    pass
-
-
-class MetadataInconsistency(Inconsistency):
-    def __init__(self, layerName, mdUrl):
-        self.mdUrl = mdUrl
-        self.layerName = layerName
-
-
-    def __str__(self):
-        return "Metadata %s not found or invalid for layer %s" % self.layerName, self.mdUrl
-
-
-class MetadataMissingInconsistency(Inconsistency):
-    def __init__(self, layerName):
-        self.layerName = layerName
-
-    def __str__(self):
-        return "No metadata defined for layer %s" % self.layerName
-
-
 if __name__ == "__main__":
-    wms_service_url = os.getenv('WMS_SERVICE')
+    # wms_service_url = os.getenv('WMS_SERVICE')
+    wms_service_url = 'https://www.pigma.org/geoserver/ows'
     if not wms_service_url:
         sys.exit("Missing WMS_SERVICE environment variable")
     print("Querying %s ..." % wms_service_url)
-    service = OwsServer(wms_service_url)
+    service = OwsServer(wms_service_url, wms=False)
     inconsistencies = []
 
     for workspace, layers in service.layersByWorkspace.items():
@@ -98,7 +85,7 @@ if __name__ == "__main__":
             for mdUrl in mdUrls:
                 gmd = GeoMetadata(mdUrl)
                 if gmd.errorMsg is not None:
-                    inconsistencies.append(MetadataInconsistency(fqLayerName, mdUrl))
+                    inconsistencies.append(MetadataInvalidInconsistency(fqLayerName, mdUrl))
     print("Finished integrity check against WMS GetCapabilities")
     totalLayers = sum(len(v) for k,v in service.layersByWorkspace.items())
     print("%d layers parsed" % totalLayers)
