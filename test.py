@@ -98,6 +98,8 @@ class GeoserverServices:
                 raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, md_uuid=None, msg="HTTPError: %s" % str(ex))
             except ServiceException as ex:
                 raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, md_uuid=None, msg="ServiceException: %s" % str(ex))
+            except AttributeError as ex:
+                raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, md_uuid=None, msg="AttributeError: %s" % str(ex))
         try:
             self.servers[url][name]
         except KeyError:
@@ -127,6 +129,11 @@ while True:
     print("---------------------------------------------------------------------------------------------")
 
     res = csw_q.get_records()
+
+    # no more results, we should stop
+    if csw_q.csw.results['returned'] == 0:
+        break
+
     for uuid in res:
         print("\nUUID : %s" % uuid)
 
@@ -146,3 +153,7 @@ while True:
                 ex.set_md_uuid(uuid)
                 errors.append(ex)
                 print("\t /!\\ ---> Cannot find Layer ON GS : %s %s %s %s %s" % (uuid, uri['protocol'], uri['url'], uri['name'], ex))
+
+
+for error in errors:
+    print(error)
