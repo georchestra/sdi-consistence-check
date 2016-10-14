@@ -1,25 +1,31 @@
 import xml.etree.ElementTree as etree
+
 from owslib.iso import MD_Metadata
 from owslib.util import openURL
 from requests import HTTPError
 
+from credentials import Credentials
+from inconsistency import MetadataInvalidInconsistency
+
 
 class GeoMetadata:
 
-    def __init__(self, mdUrl):
+    def __init__(self, mdUrl, mdFormat, creds = Credentials()):
         self.md = None
         self.errorMsg = None
         try:
-            rawMd = openURL(mdUrl)
+            (username, password) = creds.getFromUrl(mdUrl)
+            rawMd = openURL(mdUrl, username=username, password=password)
             content = rawMd.read()
-            self.md = MD_Metadata(etree.fromstring(content))
+            if mdFormat == "text/xml":
+                self.md = MD_Metadata(etree.fromstring(content))
         except HTTPError as e:
-            if e.response.status_code == 404:
-                self.errorMsg = "Metadata not found"
-            else:
-                self.errorMsg = "Unable to retrieve the metadata: %s" % e.strerror
-        except etree.ParseError as e:
-            self.errorMsg = "Unable to parse the metadata: %s" %e.msg
+            raise MetadataInvalidInconsistency(mdUrl,
+                                               "'%s' Metadata not found (HTTP %s): %s"
+                                               % (mdFormat, e.response.status_code, str(e)))
+        except BaseException as e:
+            raise MetadataInvalidInconsistency(mdUrl,
+                                               "Unable to parse the %s metadata: %s" % (mdFormat, str(e)))
 
     def getMetadata(self):
         return self.md
