@@ -8,6 +8,10 @@ class Credentials:
     def add(self, site, username, password):
         self._credentials[site] = (username, password)
 
+    def addFromUrl(self, url, username, password):
+        u = urlparse(url)
+        self.add(u.hostname, username, password)
+
     def get(self, site):
         try:
             return self._credentials[site]

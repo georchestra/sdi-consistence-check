@@ -20,7 +20,7 @@ class LayerNotFoundInconsistency(Inconsistency):
     """
     Class for inconsistency when a metadata contains URL to a layer which is not valid
     """
-    def __init__(self, layer_url, layer_name, md_uuid, msg=None):
+    def __init__(self, layer_url, layer_name, md_uuid=None, msg=None):
         self.layer_url = layer_url
         self.layer_name = layer_name
         self.md_uuid = md_uuid
@@ -30,7 +30,7 @@ class LayerNotFoundInconsistency(Inconsistency):
         self.md_uuid = uuid
 
     def __str__(self):
-        return "Metadata %s reference a layer : %s on %s that does not exists (%s)" \
+        return "Metadata %s references a layer : %s on %s that does not exist (%s)" \
                % (self.md_uuid, self.layer_name, self.layer_url, self.msg)
 
 

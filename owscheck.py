@@ -1,9 +1,10 @@
 import logging
-from logging import Logger
 from urllib.parse import urlparse
 
+from owslib.util import ServiceException
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
+from requests import HTTPError
 
 from credentials import Credentials
 from geometadata import GeoMetadata
@@ -57,6 +58,38 @@ class OwsServer:
         """
         l = self._ows[layerName]
         return set([(i['format'], i['url']) for i in l.metadataUrls])
+
+    def getLayer(self, name):
+        return self._ows[name]
+
+
+class CachedOwsServices:
+
+    def __init__(self, credentials = Credentials()):
+        self._servers = { "wms" : {} , "wfs" : {} }
+        self._credentials = credentials
+
+    def checkWfsLayer(self, url, name):
+        self._checkLayer(url, name, is_wms=False)
+
+    def checkWmsLayer(self, url, name):
+        self._checkLayer(url, name, is_wms=True)
+
+    def _checkLayer(self, url, name, is_wms):
+        servers_cache = self._servers["wms" if is_wms else "wfs"]
+        if url not in servers_cache.keys():
+            try:
+                servers_cache[url] = OwsServer(url, is_wms, creds=self._credentials)
+            except HTTPError as ex:
+                raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="HTTPError: %s" % str(ex))
+            except ServiceException as ex:
+                raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="ServiceException: %s" % str(ex))
+            except AttributeError as ex:
+                raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="AttributeError: %s" % str(ex))
+        try:
+            servers_cache[url].getLayer(name)
+        except KeyError:
+            raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, md_uuid=None, msg="Layer not found on GS")
 
 
 class OwsChecker:
