@@ -16,7 +16,7 @@ class Credentials:
         try:
             return self._credentials[site]
         except KeyError:
-            return None, None
+            return (None, None)
 
     def getFromUrl(self, url):
         u = urlparse(url)

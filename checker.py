@@ -6,6 +6,8 @@ import sys
 
 from credentials import Credentials
 from owscheck import OwsChecker
+from inconsistency import Inconsistency, LayerNotFoundInconsistency
+from cswquerier import CachedOwsServices, CSWQuerier
 
 # Logging configuration
 logger = logging.getLogger("owschecker")
@@ -42,9 +44,13 @@ def load_credentials():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", help="the mode to consider (WMS, WFS, CSW)")
+    parser.add_argument("--mode", help="the mode to consider (WMS, WFS, CSW)", choices=['WMS', 'WFS', 'CSW'])
+    parser.add_argument("--inspire", help="indicates if the checks should be strict or flexible, default to flexible",
+                        choices=['flexible', 'strict'], default="flexible")
     parser.add_argument("--server", help="the server to target (full URL, e.g. "
-                                         "https://sdi.georchestra.org/geoserver/wms")
+                                         "https://sdi.georchestra.org/geoserver/wms)")
+    parser.add_argument("--geoserver-to-check", help="space-separated list of geoserver hostname to check in CSW mode. "
+                                                     "Ex: sdi.georchestra.org", nargs="+")
     args = parser.parse_args(sys.argv[1:])
     load_credentials()
 
@@ -58,6 +64,47 @@ if __name__ == "__main__":
         except BaseException as e:
             logger.info("Unable to parse the remote OWS server: %s", str(e))
     elif args.mode == "CSW" and args.server is not None:
-        pass
+        geoserver_services = CachedOwsServices(creds)
+        csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services)
+
+        errors = []
+        if args.inspire == "strict":
+
+            for uuid in csw_q.get_service_mds():
+                try:
+                    csw_q.check_service_md(uuid, geoserver_to_check=args.geoserver_to_check)
+                except Inconsistency as e:
+                    errors.append(e)
+
+        elif args.inspire == "flexible":
+
+            while True:
+                res = csw_q.get_records()
+
+                # no more results, we should stop
+                if csw_q.csw.results['returned'] == 0:
+                    break
+
+                for uuid in res:
+                    logger.info("\nUUID : %s", uuid)
+
+                    #        for uri in csw.records[uuid].uris:
+                    for uri in csw_q.get_md(uuid).uris:
+                        # print("%s %s %s" % (uri['protocol'], uri['url'], uri['name']))
+                        try:
+                            if uri["protocol"] == "OGC:WMS":
+                                geoserver_services.checkWmsLayer(uri["url"], uri["name"])
+                                logger.info("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
+                            elif uri["protocol"] == "OGC:WFS":
+                                geoserver_services.checkWfsLayer(uri["url"], uri["name"])
+                                logger.info("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
+                            else:
+                                logger.info("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
+                        except LayerNotFoundInconsistency as ex:
+                            ex.set_md_uuid(uuid)
+                            errors.append(ex)
+                            logger.info("\t /!\\ ---> Cannot find Layer ON GS : %s %s %s %s %s",
+                                        uuid, uri['protocol'], uri['url'], uri['name'], ex)
+
     else:
         parser.print_help()

@@ -1,10 +1,8 @@
 import logging
 from urllib.parse import urlparse
 
-from owslib.util import ServiceException
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
-from requests import HTTPError
 
 from credentials import Credentials
 from geometadata import GeoMetadata
@@ -80,16 +78,14 @@ class CachedOwsServices:
         if url not in servers_cache.keys():
             try:
                 servers_cache[url] = OwsServer(url, is_wms, creds=self._credentials)
-            except HTTPError as ex:
-                raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="HTTPError: %s" % str(ex))
-            except ServiceException as ex:
-                raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="ServiceException: %s" % str(ex))
-            except AttributeError as ex:
-                raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="AttributeError: %s" % str(ex))
+            except BaseException as ex:
+                raise LayerNotFoundInconsistency(layer_name=name,
+                                                 layer_url=url,
+                                                 msg="%s: %s" % (ex.__class__.__name__, str(ex)))
         try:
             servers_cache[url].getLayer(name)
         except KeyError:
-            raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, md_uuid=None, msg="Layer not found on GS")
+            raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="Layer not found on GS")
 
 
 class OwsChecker:
