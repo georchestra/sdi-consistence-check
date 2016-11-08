@@ -66,7 +66,7 @@ cd sdi-consistence-check && docker build -t georchestra/sdi-consistence-check .
 
 ## Run with docker
 ```
-docker run -e WMS_SERVICE='https://sdi.georchestra.org/geoserver/wms' -it --rm georchestra/sdi-consistence-check
+docker run -ti georchestra/sdi-consistence-check python checker.py --mode CSW --server ...
 ```
 
 Work sponsored by [Service de l'Information Géographique de Rennes Métropole](https://github.com/sigrennesmetropole/)
