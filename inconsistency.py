@@ -1,5 +1,6 @@
 class Inconsistency(BaseException):
-    pass
+    def fix(self):
+        raise NotImplementedError('Not implemented')
 
 
 # Scenario 0: unable to parse the GetCapabilities

@@ -13,7 +13,7 @@ from owscheck import CachedOwsServices
 class CSWQuerier:
 
     max_records = 100
-    is_dataset = PropertyIsEqualTo("Type", "dataset")
+    is_dataset = [PropertyIsEqualTo("Type", "dataset")]
     is_service = [PropertyIsEqualTo("Type", "service")]
     non_havested = PropertyIsEqualTo("_isHarvested", "n")
 
@@ -88,6 +88,14 @@ class CSWQuerier:
                              startposition=0,
                              maxrecords=1000000)
 
+        return self.csw.records
+
+    def get_data_mds(self):
+        self.csw.getrecords2(constraints=self.is_dataset,
+                             esn='full',
+                             outputschema=namespaces['gmd'],
+                             startposition=0,
+                             maxrecords=1000000)
         return self.csw.records
 
     def check_service_md(self, uuid, geoserver_to_check=[]):
