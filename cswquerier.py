@@ -69,7 +69,7 @@ class CSWQuerier:
     def generate_filter(self):
         if len(self.mds_not_parsable) == 0:
             filters = [self.is_dataset, self.non_havested]
-            return [self.is_dataset]
+            return self.is_dataset
         elif len(self.mds_not_parsable) == 1:
             filters = [self.is_dataset,
                        # self.non_havested,
