@@ -1,6 +1,46 @@
 # SDI consistence check
 
-## Configure
+This project aims to check the relevance between data (published into a GeoServer) and metadata (in GeoNetwork), and possibly fix the detected inconsistencies when possible (missing metadata, missing URL information, ...), following different scenarios.
+
+## Setup
+
+### Classic setup using a virtualenv
+
+To install the needed dependencies, follow these steps. Note that a python3 runtime is required to launch this tool.
+
+```
+# Make sure the needed dependencies are installed
+apt-get install virtualenv gcc python3-dev libproj-dev
+
+# clone the repository
+git clone https://github.com/georchestra/sdi-consistency-check.git
+cd sdi-consistency-check
+
+virtualenv -p python3 venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### Using Docker
+
+#### Build the docker image
+
+```
+git clone https://github.com/sigrennesmetropole/sdi-consistence-check.git
+cd sdi-consistence-check && docker build -t georchestra/sdi-consistence-check .
+```
+
+#### Run with docker
+```
+docker run -ti georchestra/sdi-consistence-check python checker.py --mode CSW --server ...
+```
+
+See below for detailed options available in this tool.
+
+## Run
+
+### Password configuration
 
 If you need to check against protected services, you
 can create a configuration file in your home directory `~/.sdichecker` with following format :
@@ -10,12 +50,14 @@ can create a configuration file in your home directory `~/.sdichecker` with foll
 ```
 
 Example :
+
 ```
 sdi.georchestra.org testadmin testadmin
 ```
 
 
-## Run
+### Usage
+
 ```
 usage: checker.py [-h] [--mode {WMS,WFS,CSW}] [--inspire {flexible,strict}]
                   [--server SERVER]
@@ -57,16 +99,6 @@ python3 checker.py --mode CSW --inspire=strict --geoserver-to-check sdi.georches
 ```
 
 
-## Build docker image
-```
-git clone https://github.com/sigrennesmetropole/sdi-consistence-check.git
-cd sdi-consistence-check && docker build -t georchestra/sdi-consistence-check .
-```
-
-
-## Run with docker
-```
-docker run -ti georchestra/sdi-consistence-check python checker.py --mode CSW --server ...
-```
+## About / Acknowledgements
 
 Work sponsored by [Service de l'Information Géographique de Rennes Métropole](https://github.com/sigrennesmetropole/)
