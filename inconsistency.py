@@ -17,7 +17,7 @@ class UnparseableGetCapabilitiesInconsistency(Inconsistency):
 
 
 # Scenario 1.a: GN -> GS (strict method)
-class LayerNotFoundInconsistency(Inconsistency):
+class GnToGsLayerNotFoundInconsistency(Inconsistency):
     """
     Class for inconsistency when a metadata contains URL to a layer which is not valid
     """
@@ -36,28 +36,28 @@ class LayerNotFoundInconsistency(Inconsistency):
 
 
 # Scenario 1.c: GS -> GN
-class MetadataInvalidInconsistency(Inconsistency):
+class GsToGnMetadataInvalidInconsistency(Inconsistency):
     """
     Class which traces inconsistencies when a layer defines a Metadata URL which is
     not reachable or invalid.
     """
-    def __init__(self, mdUrl, message, layerName=None):
-        self.mdUrl = mdUrl
-        self.layerName = layerName
+    def __init__(self, md_url, message, layer_name=None):
+        self.md_url = md_url
+        self.layer_name = layer_name
         self.message = message
 
     def __str__(self):
-        return "Metadata %s not found or invalid for layer %s: %s" % (self.layerName, self.mdUrl, self.message)
+        return "Metadata %s not found or invalid for layer %s: %s" % (self.layer_name, self.md_url, self.message)
 
 
-class MetadataMissingInconsistency(Inconsistency):
+class GsToGnMetadataMissingInconsistency(Inconsistency):
     """
     Class which traces inconsistencies when a layer is defined in the WMS GetCapabilities
     with no metadata URL.
     """
-    def __init__(self, layerName):
-        self.layerName = layerName
+    def __init__(self, layer_name):
+        self.layer_name = layer_name
 
     def __str__(self):
-        return "No metadata defined for layer %s" % self.layerName
+        return "No metadata defined for layer %s" % self.layer_name
 

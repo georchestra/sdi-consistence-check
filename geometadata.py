@@ -5,7 +5,7 @@ from owslib.util import openURL
 from requests import HTTPError
 
 from credentials import Credentials
-from inconsistency import MetadataInvalidInconsistency
+from inconsistency import GsToGnMetadataInvalidInconsistency
 
 
 class GeoMetadata:
@@ -20,11 +20,11 @@ class GeoMetadata:
             if mdFormat == "text/xml":
                 self.md = MD_Metadata(etree.fromstring(content))
         except HTTPError as e:
-            raise MetadataInvalidInconsistency(mdUrl,
+            raise GsToGnMetadataInvalidInconsistency(mdUrl,
                                                "'%s' Metadata not found (HTTP %s): %s"
-                                               % (mdFormat, e.response.status_code, str(e)))
+                                                     % (mdFormat, e.response.status_code, str(e)))
         except BaseException as e:
-            raise MetadataInvalidInconsistency(mdUrl,
+            raise GsToGnMetadataInvalidInconsistency(mdUrl,
                                                "Unable to parse the %s metadata: %s" % (mdFormat, str(e)))
 
     def getMetadata(self):

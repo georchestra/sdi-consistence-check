@@ -3,14 +3,15 @@ import argparse
 import logging
 import os
 import sys
-from time import gmtime, strftime
+from math import floor
+from time import strftime, localtime
 
 from owslib.util import ServiceException
 
 from credentials import Credentials
-from owscheck import OwsChecker
-from inconsistency import Inconsistency, LayerNotFoundInconsistency
 from cswquerier import CachedOwsServices, CSWQuerier
+from inconsistency import Inconsistency, GnToGsLayerNotFoundInconsistency
+from owscheck import OwsChecker
 
 # Logging configuration
 logger = logging.getLogger("owschecker")
@@ -21,9 +22,11 @@ logger.setLevel(logging.INFO)
 
 creds = Credentials()
 
-def print_error(errors):
-    for error in errors:
-        print("Error : %s" % str(error))
+
+def print_layers_error(errors):
+    for idx, error in enumerate(errors):
+        logger.error("#%d\n  Layer: %s", idx, error.layer_name)
+        logger.error("  Error: %s\n" % str(error))
 
 def load_credentials():
     """
@@ -54,9 +57,16 @@ def print_banner(args):
     else:
         logger.info("WxS service URL: %s", args.server)
     logger.info("output mode: log")
-    logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+    logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
     logger.info("\n\n")
 
+
+def print_report(owschecker):
+        total_layers = sum(len(v) for k, v in owschecker.get_service().layersByWorkspace.items())
+        inconsistencies_found = len(owschecker.get_inconsistencies())
+        logger.info("\n\n%d layers parsed, %d inconsistencies found (%d %%)", total_layers,
+                    inconsistencies_found, floor((total_layers * 100 / inconsistencies_found)))
+        logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -77,12 +87,13 @@ if __name__ == "__main__":
     print_banner(args)
 
     if (args.mode == "WMS" or args.mode == "WFS") and args.server is not None:
-        logger.info("Querying %s ..." % args.server)
+        logger.debug("Querying %s ..." % args.server)
         ows_checker = None
         try:
             ows_checker = OwsChecker(args.server, wms=(True if args.mode == "WMS" else False), creds=creds)
-            print_error(ows_checker.getInconsistencies())
-            print(ows_checker.getReport())
+            logger.debug("Finished integrity check against %s GetCapabilities", args.mode)
+            print_layers_error(ows_checker.get_inconsistencies())
+            print_report(ows_checker)
         except BaseException as e:
             logger.info("Unable to parse the remote OWS server: %s", str(e))
 
@@ -122,7 +133,7 @@ if __name__ == "__main__":
                                 logger.info("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                             else:
                                 logger.info("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
-                        except LayerNotFoundInconsistency as ex:
+                        except GnToGsLayerNotFoundInconsistency as ex:
                             ex.set_md_uuid(uuid)
                             errors.append(ex)
                             logger.info("\t /!\\ ---> Cannot find Layer ON GS : %s %s %s %s %s",

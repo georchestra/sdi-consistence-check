@@ -79,13 +79,13 @@ class CachedOwsServices:
             try:
                 servers_cache[url] = OwsServer(url, is_wms, creds=self._credentials)
             except BaseException as ex:
-                raise LayerNotFoundInconsistency(layer_name=name,
-                                                 layer_url=url,
-                                                 msg="%s: %s" % (ex.__class__.__name__, str(ex)))
+                raise GnToGsLayerNotFoundInconsistency(layer_name=name,
+                                                       layer_url=url,
+                                                       msg="%s: %s" % (ex.__class__.__name__, str(ex)))
         try:
             servers_cache[url].getLayer(name)
         except KeyError:
-            raise LayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="Layer not found on GS")
+            raise GnToGsLayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="Layer not found on GS")
 
 
 class OwsChecker:
@@ -107,21 +107,17 @@ class OwsChecker:
                 fqLayerName = "%s:%s" % (workspace, layer)
                 mdUrls = self._service.getMetadatas(fqLayerName)
                 if len(mdUrls) == 0:
-                    self._inconsistencies.append(MetadataMissingInconsistency(fqLayerName))
+                    self._inconsistencies.append(GsToGnMetadataMissingInconsistency(fqLayerName))
                     continue
                 for (mdFormat, mdUrl) in mdUrls:
                     try:
                         GeoMetadata(mdUrl, mdFormat, creds=creds)
-                    except MetadataInvalidInconsistency as e:
+                    except GsToGnMetadataInvalidInconsistency as e:
                         e.layerName = fqLayerName
                         self._inconsistencies.append(e)
-        self.logger.info("Finished integrity check against %s GetCapabilities", "wms" if wms else "wfs")
 
-
-    def getReport(self):
-        totalLayers = sum(len(v) for k, v in self._service.layersByWorkspace.items())
-        self.logger.info("%d layers parsed" % totalLayers)
-        self.logger.info("%d inconsistencies found" % len(self._inconsistencies))
-
-    def getInconsistencies(self):
+    def get_inconsistencies(self):
         return self._inconsistencies
+
+    def get_service(self):
+        return self._service
