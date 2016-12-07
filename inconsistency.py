@@ -35,6 +35,29 @@ class GnToGsLayerNotFoundInconsistency(Inconsistency):
                % (self.md_uuid, self.layer_name, self.layer_url, self.msg)
 
 
+class GnToGsNoOGCWmsDefined(Inconsistency):
+    """
+    Class used to describe a data metadata which misses a URL with OGC:WMS protocol
+    """
+    def __init__(self, md_uuid):
+        self.md_uuid = md_uuid
+
+    def __str__(self):
+        return "Metadata %s does not reference any url with protocol OGC:WMS" \
+            % self.md_uuid
+
+
+class GnToGsNoOGCWfsDefined(Inconsistency):
+    """
+    Class used to describe a data metadata which misses a URL with OGC:WFS protocol
+    """
+    def __init__(self, md_uuid):
+        self.md_uuid = md_uuid
+
+    def __str__(self):
+        return "Metadata %s does not reference any url with protocol OGC:WFS" \
+               % self.md_uuid
+
 # Scenario 1.c: GS -> GN
 class GsToGnMetadataInvalidInconsistency(Inconsistency):
     """

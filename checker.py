@@ -10,7 +10,7 @@ from owslib.util import ServiceException
 
 from credentials import Credentials
 from cswquerier import CachedOwsServices, CSWQuerier
-from inconsistency import Inconsistency, GnToGsLayerNotFoundInconsistency
+from inconsistency import Inconsistency, GnToGsLayerNotFoundInconsistency, GnToGsNoOGCWmsDefined, GnToGsNoOGCWfsDefined
 from owscheck import OwsChecker
 
 # Logging configuration
@@ -54,6 +54,7 @@ def print_banner(args):
     logger.info("mode: %s\n", args.mode)
     if (args.mode == "CSW"):
         logger.info("metadata catalog CSW URL: %s", args.server)
+        logger.info("INSPIRE mode: %s", args.inspire)
     else:
         logger.info("WxS service URL: %s", args.server)
     logger.info("output mode: log")
@@ -61,12 +62,20 @@ def print_banner(args):
     logger.info("\n\n")
 
 
-def print_report(owschecker):
+def print_ows_report(owschecker):
         total_layers = sum(len(v) for k, v in owschecker.get_service().layersByWorkspace.items())
         inconsistencies_found = len(owschecker.get_inconsistencies())
         logger.info("\n\n%d layers parsed, %d inconsistencies found (%d %%)", total_layers,
                     inconsistencies_found, floor((total_layers * 100 / inconsistencies_found)))
         logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
+
+def print_csw_report(cswquerier, errors, total_mds):
+    unique_mds_in_error = { error.md_uuid for error in errors }
+    err_percent = floor(len(unique_mds_in_error) * 100 / total_mds)
+    logger.info("\n\n%d metadata parsed, %d inconsistencies found (%d %%)",
+                total_mds, len(errors), err_percent)
+    logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -93,14 +102,16 @@ if __name__ == "__main__":
             ows_checker = OwsChecker(args.server, wms=(True if args.mode == "WMS" else False), creds=creds)
             logger.debug("Finished integrity check against %s GetCapabilities", args.mode)
             print_layers_error(ows_checker.get_inconsistencies())
-            print_report(ows_checker)
+            print_ows_report(ows_checker)
         except BaseException as e:
             logger.info("Unable to parse the remote OWS server: %s", str(e))
 
     elif args.mode == "CSW" and args.server is not None:
+        total_mds = 0
         geoserver_services = CachedOwsServices(creds)
         try:
-            csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services)
+            csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services,
+                               logger=logger)
         except ServiceException as e:
             logger.fatal("Unable to query the remote CSW:\nError: %s\nPlease check the CSW url", e)
             sys.exit(1)
@@ -116,26 +127,47 @@ if __name__ == "__main__":
         elif args.inspire == "flexible":
             while True:
                 res = csw_q.get_records()
-                # no more results, we should stop
-                if csw_q.csw.results['returned'] == 0:
-                    break
-                for uuid in res:
-                    logger.info("\nUUID : %s", uuid)
-                    #        for uri in csw.records[uuid].uris:
+                total_mds += len(res)
+                for idx, uuid in enumerate(res):
+                    current_md = res[uuid]
+                    logger.info("#%d\n  UUID : %s\n  %s", idx, uuid, current_md.title)
+                    wms_found = False
+                    wfs_found = False
                     for uri in csw_q.get_md(uuid).uris:
-                        # print("%s %s %s" % (uri['protocol'], uri['url'], uri['name']))
                         try:
                             if uri["protocol"] == "OGC:WMS":
+                                wms_found = True
                                 geoserver_services.checkWmsLayer(uri["url"], uri["name"])
-                                logger.info("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
+                                logger.debug("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                             elif uri["protocol"] == "OGC:WFS":
+                                wfs_found = True
                                 geoserver_services.checkWfsLayer(uri["url"], uri["name"])
-                                logger.info("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
+                                logger.debug("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                             else:
-                                logger.info("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
+                                logger.debug("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                         except GnToGsLayerNotFoundInconsistency as ex:
                             ex.set_md_uuid(uuid)
                             errors.append(ex)
-                            logger.info("\t /!\\ ---> Cannot find Layer ON GS : %s %s %s %s %s",
+                            logger.debug("\t /!\\ ---> Cannot find Layer ON GS : %s %s %s %s %s",
                                         uuid, uri['protocol'], uri['url'], uri['name'], ex)
 
+                    str_wms_found = "    checking WMS url: "
+                    str_wfs_found = "    checking WFS url: "
+                    if wms_found == False:
+                        str_wms_found += "error: no OGC:WMS url defined"
+                        errors.append(GnToGsNoOGCWmsDefined(uuid))
+                    else:
+                        str_wms_found += "OK"
+                    if wfs_found == False:
+                        str_wfs_found += "error: no OGC:WFS url defined"
+                        errors.append(GnToGsNoOGCWfsDefined(uuid))
+                    else:
+                        str_wfs_found += "OK"
+                    logger.info(str_wms_found)
+                    logger.info(str_wfs_found)
+                    logger.info("")
+                # no more results, we should stop
+                if csw_q.csw.results['nextrecord'] == 0:
+                    break
+
+        print_csw_report(csw_q, errors, total_mds)

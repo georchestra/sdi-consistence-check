@@ -1,3 +1,4 @@
+import logging
 import re
 import xml.etree.ElementTree as ET
 from contextlib import suppress
@@ -12,7 +13,6 @@ from owscheck import CachedOwsServices
 
 
 class CSWQuerier:
-
     max_records = 100
     is_dataset = [PropertyIsEqualTo("Type", "dataset")]
     is_service = [PropertyIsEqualTo("Type", "service")]
@@ -20,8 +20,13 @@ class CSWQuerier:
 
     protocol_regexp = re.compile("^OGC:(?P<type>WMS|WFS)(?:-(?P<version>\d+(?:\.\d+)*)(?:-[\w-]+)?)?$", re.IGNORECASE)
 
-    def __init__(self, url, credentials=Credentials(), cached_ows_services=None):
+    def __init__(self, url, credentials=Credentials(), cached_ows_services=None, logger=None):
         (username, password) = credentials.getFromUrl(url)
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger("cswquerier")
+            self.logger.addHandler(logging.nullHandler())
         if cached_ows_services is None:
             self.owsServices = CachedOwsServices(credentials=credentials)
         else:
@@ -35,37 +40,17 @@ class CSWQuerier:
         self.md_count = -1
 
     def get_records(self):
-        try:
-            self.csw.getrecords2(constraints=self.generate_filter(),
-                                 esn='full',
-                                 startposition=self.start,
-                                 maxrecords=self.max_records)
-            print("CSWQuerier.get_records() results : %s (start=%s, max=%s)" % (self.csw.results, self.start, self.max_records))
-            self.start += self.csw.results['returned']
-        except ValueError:
-            self.search_for_error()
-            return self.get_records()
-
+        self.csw.getrecords2(constraints=self.generate_filter(),
+                             esn='full',
+                             startposition=self.start,
+                             maxrecords=self.max_records)
+        self.logger.debug("CSWQuerier.get_records() results : %s (start=%s, max=%s)",
+                          self.csw.results, self.start, self.max_records)
+        self.start += self.csw.results['returned']
         return self.csw.records
 
     def get_md(self, uuid):
         return self.csw.records[uuid]
-
-    def search_for_error(self):
-        index = self.start
-        while index < self.start + self.max_records:
-            try:
-                self.csw.getrecords2(constraints=self.generate_filter(), esn='full', startposition=index, maxrecords=1)
-                print("Index : %s" % index)
-                index += 1
-            except ValueError:
-                self.csw.getrecords2(constraints=self.generate_filter(), startposition=index, maxrecords=1)
-                for uuid in self.csw.records:
-                    self.mds_not_parsable.append(uuid)
-                    print("-----------------------------------------------------------------------------------------------------------------------------------> Error on %s at %s" % (uuid, index))
-                    return
-
-                return ValueError("Unable to find bogus MD")
 
     def generate_filter(self):
         if len(self.mds_not_parsable) == 0:
@@ -82,7 +67,6 @@ class CSWQuerier:
         return [And(filters)]
 
     def get_service_mds(self):
-
         self.csw.getrecords2(constraints=self.is_service,
                              esn='full',
                              outputschema=namespaces['gmd'],
@@ -90,6 +74,7 @@ class CSWQuerier:
                              maxrecords=1000000)
 
         return self.csw.records
+
 
     def get_data_mds(self):
         self.csw.getrecords2(constraints=self.is_dataset,
@@ -99,8 +84,8 @@ class CSWQuerier:
                              maxrecords=1000000)
         return self.csw.records
 
-    def check_service_md(self, uuid, geoserver_to_check=[]):
 
+    def check_service_md(self, uuid, geoserver_to_check=[]):
         md = self.csw.records[uuid]
 
         # check if this is an interesting service md (contains "coupledResource" or "operatesOn" tag)
@@ -146,8 +131,10 @@ class CSWQuerier:
         for r in res:
             operationName = identifier = layer_name = None
             with suppress(AttributeError):
-                operationName = r.find(".//{http://www.isotc211.org/2005/srv}operationName/{http://www.isotc211.org/2005/gco}CharacterString").text
-                identifier = r.find(".//{http://www.isotc211.org/2005/srv}identifier/{http://www.isotc211.org/2005/gco}CharacterString").text
+                operationName = r.find(
+                    ".//{http://www.isotc211.org/2005/srv}operationName/{http://www.isotc211.org/2005/gco}CharacterString").text
+                identifier = r.find(
+                    ".//{http://www.isotc211.org/2005/srv}identifier/{http://www.isotc211.org/2005/gco}CharacterString").text
                 layer_name = r.find(".//{http://www.isotc211.org/2005/gco}ScopedName").text
             if identifier is not None and layer_name is not None:
                 print("\tcoupledRessources:")
