@@ -3,6 +3,9 @@ import argparse
 import logging
 import os
 import sys
+from time import gmtime, strftime
+
+from owslib.util import ServiceException
 
 from credentials import Credentials
 from owscheck import OwsChecker
@@ -42,6 +45,19 @@ def load_credentials():
         logger.info("No ~/.sdichecker file found, skipping credentials definition.")
         pass
 
+
+def print_banner(args):
+    logger.info("\nSDI check\n\n")
+    logger.info("mode: %s\n", args.mode)
+    if (args.mode == "CSW"):
+        logger.info("metadata catalog CSW URL: %s", args.server)
+    else:
+        logger.info("WxS service URL: %s", args.server)
+    logger.info("output mode: log")
+    logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+    logger.info("\n\n")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", help="the mode to consider (WMS, WFS, CSW)", choices=['WMS', 'WFS', 'CSW'])
@@ -54,6 +70,12 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     load_credentials()
 
+    if (args.mode is None or args.mode not in ["WMS", "WFS", "CSW"]):
+        parser.print_help()
+        sys.exit()
+
+    print_banner(args)
+
     if (args.mode == "WMS" or args.mode == "WFS") and args.server is not None:
         logger.info("Querying %s ..." % args.server)
         ows_checker = None
@@ -63,13 +85,17 @@ if __name__ == "__main__":
             print(ows_checker.getReport())
         except BaseException as e:
             logger.info("Unable to parse the remote OWS server: %s", str(e))
+
     elif args.mode == "CSW" and args.server is not None:
         geoserver_services = CachedOwsServices(creds)
-        csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services)
-
+        try:
+            csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services)
+        except ServiceException as e:
+            logger.fatal("Unable to query the remote CSW:\nError: %s\nPlease check the CSW url", e)
+            sys.exit(1)
         errors = []
-        if args.inspire == "strict":
 
+        if args.inspire == "strict":
             for uuid in csw_q.get_service_mds():
                 try:
                     csw_q.check_service_md(uuid, geoserver_to_check=args.geoserver_to_check)
@@ -77,17 +103,13 @@ if __name__ == "__main__":
                     errors.append(e)
 
         elif args.inspire == "flexible":
-
             while True:
                 res = csw_q.get_records()
-
                 # no more results, we should stop
                 if csw_q.csw.results['returned'] == 0:
                     break
-
                 for uuid in res:
                     logger.info("\nUUID : %s", uuid)
-
                     #        for uri in csw.records[uuid].uris:
                     for uri in csw_q.get_md(uuid).uris:
                         # print("%s %s %s" % (uri['protocol'], uri['url'], uri['name']))
@@ -106,5 +128,3 @@ if __name__ == "__main__":
                             logger.info("\t /!\\ ---> Cannot find Layer ON GS : %s %s %s %s %s",
                                         uuid, uri['protocol'], uri['url'], uri['name'], ex)
 
-    else:
-        parser.print_help()

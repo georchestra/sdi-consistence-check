@@ -1,9 +1,10 @@
-from owslib.csw import CatalogueServiceWeb, namespaces
-from owslib.fes import PropertyIsEqualTo, Not, Or, And
 import re
+import xml.etree.ElementTree as ET
 from contextlib import suppress
 from urllib.parse import urlparse
-import xml.etree.ElementTree as ET
+
+from owslib.csw import CatalogueServiceWeb, namespaces
+from owslib.fes import PropertyIsEqualTo, Not, Or, And
 
 from credentials import Credentials
 from inconsistency import Inconsistency
