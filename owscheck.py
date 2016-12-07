@@ -115,7 +115,7 @@ class OwsChecker:
                     except MetadataInvalidInconsistency as e:
                         e.layerName = fqLayerName
                         self._inconsistencies.append(e)
-        self.logger.info("Finished integrity check against WMS GetCapabilities")
+        self.logger.info("Finished integrity check against %s GetCapabilities", "wms" if wms else "wfs")
 
 
     def getReport(self):
