@@ -65,13 +65,15 @@ def print_banner(args):
 def print_ows_report(owschecker):
         total_layers = sum(len(v) for k, v in owschecker.get_service().layersByWorkspace.items())
         inconsistencies_found = len(owschecker.get_inconsistencies())
+        layers_inconst_percent = floor((total_layers * 100 / inconsistencies_found)) if \
+            inconsistencies_found > 0 else 0
         logger.info("\n\n%d layers parsed, %d inconsistencies found (%d %%)", total_layers,
-                    inconsistencies_found, floor((total_layers * 100 / inconsistencies_found)))
+                    inconsistencies_found, layers_inconst_percent)
         logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
-def print_csw_report(cswquerier, errors, total_mds):
+def print_csw_report(errors, total_mds):
     unique_mds_in_error = { error.md_uuid for error in errors }
-    err_percent = floor(len(unique_mds_in_error) * 100 / total_mds)
+    err_percent = floor(len(unique_mds_in_error) * 100 / total_mds) if total_mds > 0 else 0
     logger.info("\n\n%d metadata parsed, %d inconsistencies found (%d %%)",
                 total_mds, len(errors), err_percent)
     logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
@@ -84,7 +86,8 @@ if __name__ == "__main__":
                         choices=['flexible', 'strict'], default="flexible")
     parser.add_argument("--server", help="the server to target (full URL, e.g. "
                                          "https://sdi.georchestra.org/geoserver/wms)")
-    parser.add_argument("--geoserver-to-check", help="space-separated list of geoserver hostname to check in CSW mode. "
+    parser.add_argument("--geoserver-to-check", help="space-separated list of geoserver hostname to check in CSW mode "
+                                                     "with inspire strict option activated. "
                                                      "Ex: sdi.georchestra.org", nargs="+")
     args = parser.parse_args(sys.argv[1:])
     load_credentials()
@@ -118,11 +121,33 @@ if __name__ == "__main__":
         errors = []
 
         if args.inspire == "strict":
-            for uuid in csw_q.get_service_mds():
-                try:
-                    csw_q.check_service_md(uuid, geoserver_to_check=args.geoserver_to_check)
-                except Inconsistency as e:
-                    errors.append(e)
+            # Step 1: get all data metadata
+            datamd = csw_q.get_all_records(constraint=csw_q.is_dataset)
+            # Step 2: maps data metadatas to service MDs
+            servicesmd = csw_q.get_all_records(constraint=csw_q.is_service)
+            data_to_service_map = {}
+            for uuid, md in servicesmd.items():
+                for oon in md.identificationinfo[0].operateson:
+                    if data_to_service_map.get(oon['uuidref']) is None:
+                        data_to_service_map[oon['uuidref']] = [uuid]
+                    else:
+                        data_to_service_map[oon['uuidref']] = data_to_service_map[oon['uuidref']] + [uuid]
+
+            # Step 3: on each data md, get the service md, and the underlying service URL
+            #for uuid, md in enumerate(datamd):
+            for mdd_uuid, mdd in datamd.items():
+                if data_to_service_map.get(mdd_uuid) is None:
+                    # TODO file an issue if the dataMd as no ServiceMd linked to ?
+                    continue
+                # step 4: check the layer existence using the service URL
+                for sce_uuid in data_to_service_map[mdd_uuid]:
+                    try:
+                        mds = servicesmd[sce_uuid]
+                        mdd = datamd[mdd_uuid]
+                        csw_q.check_service_md(mds, mdd, geoserver_to_check=args.geoserver_to_check if
+                                               args.geoserver_to_check is not None else [])
+                    except Inconsistency as e:
+                        errors.append(e)
 
         elif args.inspire == "flexible":
             while True:
@@ -137,10 +162,12 @@ if __name__ == "__main__":
                         try:
                             if uri["protocol"] == "OGC:WMS":
                                 wms_found = True
+                                # TODO: use the geoserver_to_check option ?
                                 geoserver_services.checkWmsLayer(uri["url"], uri["name"])
                                 logger.debug("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                             elif uri["protocol"] == "OGC:WFS":
                                 wfs_found = True
+                                # TODO: same remark
                                 geoserver_services.checkWfsLayer(uri["url"], uri["name"])
                                 logger.debug("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                             else:
@@ -170,4 +197,4 @@ if __name__ == "__main__":
                 if csw_q.csw.results['nextrecord'] == 0:
                     break
 
-        print_csw_report(csw_q, errors, total_mds)
+        print_csw_report(errors, total_mds)
