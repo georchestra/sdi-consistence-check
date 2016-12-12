@@ -58,6 +58,19 @@ class GnToGsNoOGCWfsDefined(Inconsistency):
         return "Metadata %s does not reference any url with protocol OGC:WFS" \
                % self.md_uuid
 
+class GnToGsNoGetCapabilitiesUrl(Inconsistency):
+    """
+    Class used to describe when a service metadata does not reference a GetCapabilities
+    service URL.
+    """
+    def __init__(self, servicemd_uuid, datamd_uuid):
+        self.servicemd_uuid = servicemd_uuid
+        self.datamd_uuid = datamd_uuid
+
+    def __str__(self):
+        return "Service Metadata \"%s\" linked to the data metadata \"%s\" has no " \
+            "GetCapabilities URL defined" % (self.servicemd_uuid, self.datamd_uuid)
+
 # Scenario 1.c: GS -> GN
 class GsToGnMetadataInvalidInconsistency(Inconsistency):
     """

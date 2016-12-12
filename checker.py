@@ -136,6 +136,9 @@ if __name__ == "__main__":
             # Step 3: on each data md, get the service md, and the underlying service URL
             #for uuid, md in enumerate(datamd):
             for mdd_uuid, mdd in datamd.items():
+                # Note: this won't count the service metadata in the end, only the MDD that trigger a
+                # check onto a service MD.
+                total_mds += 1
                 if data_to_service_map.get(mdd_uuid) is None:
                     # TODO file an issue if the dataMd as no ServiceMd linked to ?
                     continue
@@ -147,6 +150,7 @@ if __name__ == "__main__":
                         csw_q.check_service_md(mds, mdd, geoserver_to_check=args.geoserver_to_check if
                                                args.geoserver_to_check is not None else [])
                     except Inconsistency as e:
+                        logger.error(e)
                         errors.append(e)
 
         elif args.inspire == "flexible":

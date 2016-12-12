@@ -9,7 +9,7 @@ from owslib.csw import CatalogueServiceWeb, namespaces
 from owslib.fes import PropertyIsEqualTo, Not, Or, And
 
 from credentials import Credentials
-from inconsistency import Inconsistency
+from inconsistency import Inconsistency, GnToGsNoGetCapabilitiesUrl
 from owscheck import CachedOwsServices
 
 
@@ -53,7 +53,6 @@ class CSWQuerier:
     def get_md(self, uuid):
         return self.csw.records[uuid]
 
-    # TODO: dead code ?
     def generate_filter(self):
         if len(self.mds_not_parsable) == 0:
             filters = [self.is_dataset, self.non_havested]
@@ -105,7 +104,6 @@ class CSWQuerier:
                 break
         return mds
 
-
     def check_service_md(self, mds, mdd, geoserver_to_check=[]):
         warnings.simplefilter("ignore")
 
@@ -125,20 +123,19 @@ class CSWQuerier:
                 protocol = op['connectpoint'][0].protocol
 
         if url is None:
-            self.logger.debug("\tSkipping : no GetCapabilities URL found")
-            # raise error ?
-            return
+            raise GnToGsNoGetCapabilitiesUrl(mds.identifier, mdd.identifier)
 
         url_parsed = urlparse(url)
         if url_parsed.hostname not in geoserver_to_check:
-            self.logger.debug("\tSkipping : geoserver : %s not in authorized list (%s)" % (url_parsed.hostname, url))
-            # raise error ?
+            self.logger.info("\tSkipping : geoserver : %s not in authorized list (%s)" % (url_parsed.hostname, url))
+            # do not raise error, since the underlying WxS server is not in the list of checked geoserver
             return
 
         # try to read protocol
+        # TODO: which protocol to check ? is there a convention at Rennes-metropole on this ?
         matches = self.protocol_regexp.match(protocol)
         if matches is None:
-            self.logger.debug("Invalid protocol : %s " % protocol)
+            self.logger.error("Invalid protocol : %s " % protocol)
             # raise error ?
             return
 
@@ -146,21 +143,21 @@ class CSWQuerier:
         version = matches.group("version")
         self.logger.debug("Server Type: %s Version: %s URL: %s" % (type, version, url))
 
-        root = ET.fromstring(md.xml.decode())
+        root = ET.fromstring(mds.xml.decode())
         xpath = ".//{http://www.isotc211.org/2005/srv}coupledResource"
         # xpath = ".//{http://www.isotc211.org/2005/srv}operatesOn"
         res = root.findall(xpath)
         for r in res:
-            operationName = identifier = layer_name = None
+            operation_name = identifier = layer_name = None
             with suppress(AttributeError):
-                operationName = r.find(
+                operation_name = r.find(
                     ".//{http://www.isotc211.org/2005/srv}operationName/{http://www.isotc211.org/2005/gco}CharacterString").text
                 identifier = r.find(
                     ".//{http://www.isotc211.org/2005/srv}identifier/{http://www.isotc211.org/2005/gco}CharacterString").text
                 layer_name = r.find(".//{http://www.isotc211.org/2005/gco}ScopedName").text
             if identifier is not None and layer_name is not None:
                 self.logger.debug("\tcoupledRessources:")
-                self.logger.debug("\tOperation : %s" % operationName)
+                self.logger.debug("\tOperation : %s" % operation_name)
                 self.logger.debug("\tidentifier : %s" % identifier)
                 self.logger.debug("\tLayer Name: %s" % layer_name)
                 self.logger.debug("")
@@ -172,8 +169,6 @@ class CSWQuerier:
                         self.owsServices.checkWfsLayer(url, layer_name)
                     else:
                         raise Inconsistency("Invalid service type : %s" % type)
-                        self.logger.debug("Check OK : UUID: %s Layer Name: %s on %s" % (uuid, layer_name, url))
                 except Inconsistency as e:
-                    e.md_uuid = uuid
-                    self.logger.debug("Adding inconsistency : %s" % str(e))
+                    e.md_uuid = mds.identifier
                     raise e
