@@ -1,27 +1,30 @@
+import argparse
+import logging
+
+import sys
+from time import strftime, localtime
+import xml.etree.ElementTree as etree
+from urllib.request import urlopen
+
 from geoserver.catalog import Catalog
+from owslib.iso import MD_Metadata
 
 from credentials import Credentials
 from cswquerier import CSWQuerier
 
 # Scénario 2 Read-Write GN -> GS
 #
-# Le document de spécification rédigé par C2C prévoit une interrogation préalable du GeoServer. A la relecture
-# Je ne comprends pas bien l'intéret, je pense qu'on peut récupérer directement les MDDs depuis GN, les parser,
-# et s'assurer coté GS que "tout est OK".
-# Par ailleurs, la demande provenant de Rennes-Métropole prévoit de s'assurer de la cohérence des champs suivants:
-#
+# 1. récupérer sur le GS les couches concernées par le lancement (parametres)
+# * remonter une erreur si la couche ne référence pas de MD
+# 2. Remonter sur GN, et récupérer la MDD référencée
+# 3. Modifier si nécessaire les champs suivants:
 # * Titre
-# * nom de la couche (c.f. MDs dans geOrchestra, geopicardie est un bon élève)
 # * résumé
-# * url vers la MD en HTML
-# * url vers la MD en XML
-# * Attribution (pas clair dans les spécifications ? Point de contact ? de quel role ?)
+# * Attribution (récupérer le useLimitation, et regexp sur "(.*)")
+#   md.identificationinfo[0].uselimitation[0]
 #
-# Le résultat prévoit en outre:
-#
-# * un test de la couche (savoir si d'unte part elle existe dans GS, d'autre part si elle est visible sans erreur
-# * Information non présente dans la MD mais dans GS (/!\ écrasement si plus d'info d'un coté ou de l'autre ?)
-#
+
+from inconsistency import GsToGnMetadataMissingInconsistency
 
 
 class GeonetworkToGeoserverUpdater:
@@ -64,12 +67,9 @@ class GeonetworkToGeoserverUpdater:
         else:
             mdlinks = []
         if not has_md_xml:
-            mdlinks.append(("application/xml", "19139", md_url_xml))
+            mdlinks.append(("text/xml", "19139", md_url_xml))
         if not has_md_html:
             mdlinks.append(("text/html", "19139", md_url_html))
-        # TODO: '19139' above is not yet managed by the gsconfig (gsconfig-py3) library,
-        # see https://github.com/boundlessgeo/gsconfig/pull/166
-        # We might need to use ISO19115:2003 instead (this is what géopicardie does anyway)
         if not self.dryrun:
             res.metadata_links = mdlinks
             catalog = res.catalog
@@ -142,13 +142,176 @@ class GeonetworkToGeoserverUpdater:
                 else:
                     print("resource not found for layer %s" % layer.name)
 
+# Logging configuration
+logger = logging.getLogger("GnToGsUpdater")
+out_hdlr = logging.StreamHandler(sys.stdout)
+out_hdlr.setLevel(logging.INFO)
+logger.addHandler(out_hdlr)
+logger.setLevel(logging.INFO)
 
-DRY_RUN = False
+
+def update_resource(resource, title, abstract, md_url_html, dry_run):
+    """
+    Updates a Geoserver resource
+    :param resource: a gsconfig resource
+    :param title: the title to set
+    :param abstract: the abstract to set
+    :param md_url_html: the metadata url for the HTML version
+    :param dry_run: true does not modify anything, false for actually saving the resource
+    :return:
+    """
+    # Updates the MD title (if not present or if the MD title is bigger)
+    upd_title = False
+    upd_abstract = False
+    if resource.title is None or resource.title < title:
+        resource.title = title
+        upd_title = True
+    # Same algo for the abstract
+    if resource.abstract is None or resource.abstract < abstract:
+        resource.abstract = abstract
+        upd_abstract = True
+    # Check that MD Urls are present
+    has_md_html = False
+    # Note: res.metadata_links cannot be None, because we used it to get the MDD
+    mdlinks = resource.metadata_links
+    for lnk in mdlinks:
+        if lnk[0] == "text/html":
+            has_md_html = True
+            break
+    if not has_md_html:
+        mdlinks.append(("text/html", "ISO19115:2003", md_url_html))
+    if not dry_run:
+        resource.metadata_links = mdlinks
+        catalog = res.catalog
+        catalog.save(res)
+        catalog.reload()
+        logger.info("\"%s\": layer info updated" % res.title)
+    else:
+        logger.info("dry-run mode: not updating the resource for layer \"%s\"" % res.title)
+        if upd_title:
+            logger.info("\t- the title of the resource should have been updated")
+        if upd_abstract:
+            logger.info("\t- the abstract of the resource should have been updated")
+        if not has_md_html:
+            logger.info("\t- an HTML metadata URL should have been added")
+
+def find_metadata(resource):
+    """
+    Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
+    :param resource: an object from the gsconfig python library (either a resource or a layergroup)
+    :return: the parsed metadata.
+    """
+    if resource.metadata_links is None:
+        raise GsToGnMetadataMissingInconsistency(resource.workspace + ":" + resource.name)
+    for mime_type, format, url in resource.metadata_links:
+        if mime_type == "text/xml" and format == "ISO19115:2003":
+            with urlopen(url) as fhandle:
+                return MD_Metadata(etree.parse(fhandle))
+    raise GsToGnMetadataMissingInconsistency(resource.workspace + ":" + resource.name)
+
+
+def gn_to_gs_fix(resource, dry_run):
+    print(resource.name)
+    md = find_metadata(resource)
+    print(md.identifier)
+
+def print_banner(args):
+    logger.info("\nGeoNetwork To Geoserver Updater\n\n")
+    logger.info("mode: %s\n", args.mode)
+    if args.mode in ["workspace", "layer"]:
+        logger.info("item to query: %s", args.item)
+    logger.info("GeoServer to query: %s", args.geoserver)
+    logger.info("dry-run: %s", args.dry_run)
+    logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
+    logger.info("\n\n")
+
 
 if __name__ == "__main__":
-    gs2gnupd = GeonetworkToGeoserverUpdater("http://localhost:8080/geonetwork",
-                                            "http://localhost:8080/geoserver", dryrun=DRY_RUN)
-    gs2gnupd.fix()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", help="""the mode to consider:
+     "full" for the whole WxS server (see the "--wxs-server" option),
+     "workspace" for a workspace,
+     "layer" for a single layer""", choices=['full', 'workspace', 'layer'])
+
+    parser.add_argument("--item", help="""indicates the item (layer or workspace) name, see the "mode" option.
+                                       The option is ignored in "full" mode.""")
+    parser.add_argument("--geoserver", help="the GeoServer to use.")
+    parser.add_argument("--dry-run", help="Dry-run mode, default true", choices=[True, False], default=True)
+
+    args = parser.parse_args(sys.argv[1:])
+
+    if (args.mode is None or args.mode not in ["full", "workspace", "layer"]
+        or args.geoserver is None):
+        parser.print_help()
+        sys.exit()
+
+    gscatalog = Catalog(args.geoserver + "/rest/")
+    errors = []
+    # Whole geoserver catalog
+    if args.mode == "full":
+        print_banner(args)
+        # Layers
+        workspaces = gscatalog.get_workspaces()
+        for ws in workspaces:
+            resources = gscatalog.get_resources(workspace=ws)
+            for res in resources:
+                gn_to_gs_fix(res, args.dry_run)
+        # Layer groups
+        lgroups = gscatalog.get_layergroups()
+        for lg in lgroups:
+            gn_to_gs_fix(lg, args.dry_run)
+    # Workspace
+    elif args.mode == "workspace":
+        if args.item is None:
+            print("Missing item option")
+            parser.print_help()
+            sys.exit()
+        print_banner(args)
+        workspace = gscatalog.get_workspace(name=args.item)
+        if workspace is None:
+            logger.error("workspace \"%s\" not found" % args.item)
+            sys.exit()
+        else:
+            resources = gscatalog.get_resources(workspace=workspace)
+            for res in resources:
+                gn_to_gs_fix(res, args.dry_run)
+    # Single layer
+    else:
+        # TODO: weird ... gsconfig.get_layer(name="...") returns always a layer, even if it does not exist ...
+        # better off parsing every resources available ? What if the GS has a huge catalog ?
+        # loop on the Layers
+        print_banner(args)
+        resource_found = None
+        workspaces = gscatalog.get_workspaces()
+        for ws in workspaces:
+            resources = gscatalog.get_resources(workspace=ws)
+            for res in resources:
+                fullname = ws.name + ":" + res.name
+                if args.item == res.name or args.item == fullname:
+                    resource_found = res
+                    break
+            if resource_found is not None:
+                break
+        # Still not found ? trying on the layergroups
+        if resource_found is None:
+            lgroups = gscatalog.get_layergroups()
+            for lg in lgroups:
+                if lg.name == args.item:
+                    resource_found = lg
+                    break
+        # resource not found in the whole GeoServer
+        if resource_found is None:
+            logger.error("Ressource \"%s\" not found." % args.item)
+            sys.exit()
+        # Actually process the provided resources
+        else:
+            logger.error("Resource \"%s\" found, processing ..." % resource_found.name)
+            gn_to_gs_fix(resource_found, args.dry_run)
+
+
+    #gs2gnupd = GeonetworkToGeoserverUpdater("http://localhost:8080/geonetwork",
+    #                                        "http://localhost:8080/geoserver", dryrun=DRY_RUN)
+    #gs2gnupd.fix()
 
 
 
