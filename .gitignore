@@ -1,2 +1,6 @@
 *.pyc
 env/
+docker/*.txt
+docker/*.zip
+docker/*.war
+docker/target
