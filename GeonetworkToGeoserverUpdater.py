@@ -24,7 +24,7 @@ from cswquerier import CSWQuerier
 #   md.identificationinfo[0].uselimitation[0]
 #
 
-from inconsistency import GsToGnMetadataMissingInconsistency
+from inconsistency import GsToGnMetadataMissingInconsistency, Inconsistency
 
 
 class GeonetworkToGeoserverUpdater:
@@ -202,16 +202,15 @@ def find_metadata(resource):
     :return: the parsed metadata.
     """
     if resource.metadata_links is None:
-        raise GsToGnMetadataMissingInconsistency(resource.workspace + ":" + resource.name)
+        raise GsToGnMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
     for mime_type, format, url in resource.metadata_links:
         if mime_type == "text/xml" and format == "ISO19115:2003":
             with urlopen(url) as fhandle:
                 return MD_Metadata(etree.parse(fhandle))
-    raise GsToGnMetadataMissingInconsistency(resource.workspace + ":" + resource.name)
+    raise GsToGnMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
 
 def gn_to_gs_fix(resource, dry_run):
-    print(resource.name)
     md = find_metadata(resource)
     print(md.identifier)
 
@@ -220,11 +219,17 @@ def print_banner(args):
     logger.info("mode: %s\n", args.mode)
     if args.mode in ["workspace", "layer"]:
         logger.info("item to query: %s", args.item)
-    logger.info("GeoServer to query: %s", args.geoserver)
+    logger.info("GeoServer: %s", args.geoserver)
     logger.info("dry-run: %s", args.dry_run)
     logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
     logger.info("\n\n")
 
+
+def print_report(errors):
+    logger.info("Processing ended, here is a summary of the collected errors:")
+    for err in errors:
+        logger.info("* %s", err)
+    logger.info("\nend time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -255,11 +260,14 @@ if __name__ == "__main__":
         for ws in workspaces:
             resources = gscatalog.get_resources(workspace=ws)
             for res in resources:
-                gn_to_gs_fix(res, args.dry_run)
-        # Layer groups
-        lgroups = gscatalog.get_layergroups()
-        for lg in lgroups:
-            gn_to_gs_fix(lg, args.dry_run)
+                try:
+                    gn_to_gs_fix(res, args.dry_run)
+                except Inconsistency as e:
+                    errors.append(e)
+        # Layer groups TODO: not managed yet by gsconfig
+        # lgroups = gscatalog.get_layergroups()
+        # for lg in lgroups:
+        #     gn_to_gs_fix(lg, args.dry_run)
     # Workspace
     elif args.mode == "workspace":
         if args.item is None:
@@ -274,12 +282,19 @@ if __name__ == "__main__":
         else:
             resources = gscatalog.get_resources(workspace=workspace)
             for res in resources:
-                gn_to_gs_fix(res, args.dry_run)
+                try:
+                    gn_to_gs_fix(res, args.dry_run)
+                except Inconsistency as e:
+                    errors.append(e)
     # Single layer
     else:
         # TODO: weird ... gsconfig.get_layer(name="...") returns always a layer, even if it does not exist ...
         # better off parsing every resources available ? What if the GS has a huge catalog ?
         # loop on the Layers
+        # Also, the layergroups can actually be associated to a workspace under one restriction: all
+        # the composite layers should be in the same workspace as the layergroup itself.
+        # The case of layergroups in a workspace is not yet addressed.
+        # Anyway, gsconfig does not implement the metadata URL management on layergroups (see layergroup.py).
         print_banner(args)
         resource_found = None
         workspaces = gscatalog.get_workspaces()
@@ -293,26 +308,23 @@ if __name__ == "__main__":
             if resource_found is not None:
                 break
         # Still not found ? trying on the layergroups
-        if resource_found is None:
-            lgroups = gscatalog.get_layergroups()
-            for lg in lgroups:
-                if lg.name == args.item:
-                    resource_found = lg
-                    break
+        # TODO: Cannot update layergroups properties
+        # if resource_found is None:
+        #     lgroups = gscatalog.get_layergroups()
+        #     for lg in lgroups:
+        #         if lg.name == args.item:
+        #             resource_found = lg
+        #             break
         # resource not found in the whole GeoServer
         if resource_found is None:
             logger.error("Ressource \"%s\" not found." % args.item)
             sys.exit()
         # Actually process the provided resources
         else:
-            logger.error("Resource \"%s\" found, processing ..." % resource_found.name)
-            gn_to_gs_fix(resource_found, args.dry_run)
-
-
-    #gs2gnupd = GeonetworkToGeoserverUpdater("http://localhost:8080/geonetwork",
-    #                                        "http://localhost:8080/geoserver", dryrun=DRY_RUN)
-    #gs2gnupd.fix()
-
-
-
+            logger.debug("Resource \"%s\" found, processing ..." % resource_found.name)
+            try:
+                gn_to_gs_fix(resource_found, args.dry_run)
+            except Inconsistency as e:
+                errors.append(e)
+    print_report(errors)
 
