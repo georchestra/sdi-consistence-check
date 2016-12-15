@@ -6,6 +6,7 @@ from time import strftime, localtime
 import xml.etree.ElementTree as etree
 from urllib.request import urlopen
 
+import re
 from geoserver.catalog import Catalog
 from owslib.iso import MD_Metadata
 
@@ -35,10 +36,11 @@ logger.addHandler(out_hdlr)
 logger.setLevel(logging.INFO)
 
 
-def update_resource(resource, title, abstract, md_url_html, attribution, dry_run):
+def update_resource(layer, resource, title, abstract, md_url_html, attribution, dry_run):
     """
     Updates a Geoserver resource
-    :param resource: a gsconfig resource
+    :param layer: the gsconfig layer object
+    :param resource: a gsconfig resource object
     :param title: the title to set
     :param abstract: the abstract to set
     :param md_url_html: the metadata url for the HTML version
@@ -49,13 +51,22 @@ def update_resource(resource, title, abstract, md_url_html, attribution, dry_run
     # Updates the MD title (if not present or if the MD title is bigger)
     upd_title = False
     upd_abstract = False
-    if resource.title is None or resource.title < title:
+    upd_attribution = False
+    if resource.title is None or len(resource.title) < len(title):
         resource.title = title
         upd_title = True
     # Same algo for the abstract
-    if resource.abstract is None or resource.abstract < abstract:
+    if resource.abstract is None or len(resource.abstract) < len(abstract):
         resource.abstract = abstract
         upd_abstract = True
+    if layer.attribution is None or len(layer.attribution["title"]) < len(attribution):
+        upd_attribution = True
+        if layer.attribution is None:
+            layer.attribution = {"title": attribution}
+        else:
+            attribs = layer.attribution
+            attribs["title"] = attribution
+            layer.attribution = attribs
     # Check that MD Urls are present
     has_md_html = False
     # Note: res.metadata_links cannot be None, because we used it to get the MDD
@@ -67,17 +78,22 @@ def update_resource(resource, title, abstract, md_url_html, attribution, dry_run
     if not has_md_html:
         mdlinks.append(("text/html", "ISO19115:2003", md_url_html))
     if not dry_run:
+        # to trigger an update of the MDs, I guess the array should be re-affected
+        # (so that the object is considered as dirty / update needed against the GS REST API)
         resource.metadata_links = mdlinks
-        catalog = res.catalog
-        catalog.save(res)
+        catalog = resource.catalog
+        catalog.save(resource)
+        catalog.save(layer)
         catalog.reload()
-        logger.info("\"%s\": layer info updated\n" % res.title)
+        logger.info("\"%s:%s\": layer / resource info updated\n", resource.workspace.name, resource.name)
     else:
-        logger.info("dry-run mode: not updating the resource for layer \"%s\"" % res.title)
+        logger.info("dry-run mode: not updating the resource for layer \"%s\"" % resource.title)
         if upd_title:
             logger.info("\t- the title of the resource should have been updated")
         if upd_abstract:
             logger.info("\t- the abstract of the resource should have been updated")
+        if upd_attribution:
+            logger.info("\t- the attribution of the layer should have been updated")
         if not has_md_html:
             logger.info("\t- an HTML metadata URL should have been added")
         logger.info("\n")
@@ -86,25 +102,44 @@ def find_metadata(resource):
     """
     Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
     :param resource: an object from the gsconfig python library (either a resource or a layergroup)
-    :return: the parsed metadata.
+    :return: a tuple (url, parsed metadata).
     """
     if resource.metadata_links is None:
         raise GsToGnMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
     for mime_type, format, url in resource.metadata_links:
         if mime_type == "text/xml" and format == "ISO19115:2003":
             with urlopen(url) as fhandle:
-                return MD_Metadata(etree.parse(fhandle))
+                return (url, MD_Metadata(etree.parse(fhandle)))
     raise GsToGnMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
+def guess_catalogue_endpoint(url, md_identifier):
+    """
+    Given a URL, try to guess the catalogue endpoint. This method is used to guess the HTML URL for the metadata.
+    This is for now meant to work only with GeoNetwork (which is the catalogue mainly used in geOrchestra).
 
-def gn_to_gs_fix(resource, dry_run):
-    md = find_metadata(resource)
-    md_title = md.identificationinfo[0].title
-    md_abstract = md.identificationinfo[0].abstract
-    # TODO: what if not GeoNetwork ?
-    md_url_html = md.identifier
-    md_attribution = "geOrchestra corporation, a holding by camptocamp"
-    update_resource(resource, md_title, md_abstract, md_url_html, md_attribution, dry_run)
+    :param url: the metadata URL
+    :param md_identifier: the unique identifier of the metadata
+    :return: the guessed url.
+    """
+    m = re.search('(.*\/geonetwork\/).*', url)
+    return "%s?uuid=%s" % (m.group(1), md_identifier)
+
+def extract_attribution(str):
+    try:
+        m = re.search('"(.*)"', str)
+        return m.group(1)
+    except:
+        logger.error("unable to extract the attribution, using the whole otherConstraint field", e)
+        return str
+
+def gn_to_gs_fix(layer, resource, dry_run):
+    url, md = find_metadata(resource)
+    md_title = md.identificationinfo[0].title if len(md.identificationinfo) > 0 else ""
+    md_abstract = md.identificationinfo[0].abstract if len(md.identificationinfo) > 0 else ""
+    md_url_html = guess_catalogue_endpoint(url, md.identifier)
+    md_attribution = extract_attribution(md.identification.otherconstraints[0]) \
+        if (len(md.identification.otherconstraints)) > 0 else ""
+    update_resource(layer, resource, md_title, md_abstract, md_url_html, md_attribution, dry_run)
 
 def print_banner(args):
     logger.info("\nGeoNetwork To Geoserver Updater\n\n")
@@ -133,7 +168,7 @@ if __name__ == "__main__":
     parser.add_argument("--item", help="""indicates the item (layer or workspace) name, see the "mode" option.
                                        The option is ignored in "full" mode.""")
     parser.add_argument("--geoserver", help="the GeoServer to use.")
-    parser.add_argument("--dry-run", help="Dry-run mode, default true", choices=[True, False], default=True)
+    parser.add_argument("--dry-run", help="Dry-run mode, default true", choices=[True, False], default=False)
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -153,7 +188,8 @@ if __name__ == "__main__":
             resources = gscatalog.get_resources(workspace=ws)
             for res in resources:
                 try:
-                    gn_to_gs_fix(res, args.dry_run)
+                    layer = gscatalog.get_layer(res.workspace.name + ":" + res.name)
+                    gn_to_gs_fix(layer, res, args.dry_run)
                 except Inconsistency as e:
                     errors.append(e)
         # Layer groups TODO: not managed yet by gsconfig
@@ -175,7 +211,8 @@ if __name__ == "__main__":
             resources = gscatalog.get_resources(workspace=workspace)
             for res in resources:
                 try:
-                    gn_to_gs_fix(res, args.dry_run)
+                    layer = gscatalog.get_layer(res.workspace.name + ":" + res.name)
+                    gn_to_gs_fix(layer, res, args.dry_run)
                 except Inconsistency as e:
                     errors.append(e)
     # Single layer
@@ -215,7 +252,8 @@ if __name__ == "__main__":
         else:
             logger.debug("Resource \"%s\" found, processing ..." % resource_found.name)
             try:
-                gn_to_gs_fix(resource_found, args.dry_run)
+                layer = gscatalog.get_layer(resource_found.workspace.name + ":" + resource_found.name)
+                gn_to_gs_fix(layer, resource_found, args.dry_run)
             except Inconsistency as e:
                 errors.append(e)
     print_report(errors)
