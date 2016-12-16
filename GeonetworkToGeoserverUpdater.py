@@ -168,7 +168,8 @@ if __name__ == "__main__":
     parser.add_argument("--item", help="""indicates the item (layer or workspace) name, see the "mode" option.
                                        The option is ignored in "full" mode.""")
     parser.add_argument("--geoserver", help="the GeoServer to use.")
-    parser.add_argument("--dry-run", help="Dry-run mode, default true", choices=[True, False], default=False)
+    parser.add_argument("--dry-run", help="Dry-run mode", action='store_true')
+    parser.set_defaults(dry_run=False)
 
     args = parser.parse_args(sys.argv[1:])
 
