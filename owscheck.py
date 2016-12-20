@@ -107,7 +107,7 @@ class OwsChecker:
                 fqLayerName = "%s:%s" % (workspace, layer)
                 mdUrls = self._service.getMetadatas(fqLayerName)
                 if len(mdUrls) == 0:
-                    self._inconsistencies.append(GsToGnMetadataMissingInconsistency(fqLayerName))
+                    self._inconsistencies.append(GsMetadataMissingInconsistency(fqLayerName))
                     continue
                 for (mdFormat, mdUrl) in mdUrls:
                     try:

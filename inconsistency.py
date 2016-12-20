@@ -86,10 +86,11 @@ class GsToGnMetadataInvalidInconsistency(Inconsistency):
         return "Metadata %s not found or invalid for layer %s: %s" % (self.layer_name, self.md_url, self.message)
 
 
-class GsToGnMetadataMissingInconsistency(Inconsistency):
+class GsMetadataMissingInconsistency(Inconsistency):
     """
     Class which traces inconsistencies when a layer is defined in the WMS GetCapabilities
     with no metadata URL.
+    Note: this class is used in both scenarii (2 and 3), hence the name.
     """
     def __init__(self, layer_name):
         self.layer_name = layer_name

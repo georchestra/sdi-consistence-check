@@ -26,7 +26,7 @@ from cswquerier import CSWQuerier
 #   md.identificationinfo[0].uselimitation[0]
 #
 
-from inconsistency import GsToGnMetadataMissingInconsistency, Inconsistency
+from inconsistency import GsMetadataMissingInconsistency, Inconsistency
 
 # Logging configuration
 logger = logging.getLogger("GnToGsUpdater")
@@ -105,12 +105,12 @@ def find_metadata(resource):
     :return: a tuple (url, parsed metadata).
     """
     if resource.metadata_links is None:
-        raise GsToGnMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
+        raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
     for mime_type, format, url in resource.metadata_links:
         if mime_type == "text/xml" and format == "ISO19115:2003":
             with urlopen(url) as fhandle:
                 return (url, MD_Metadata(etree.parse(fhandle)))
-    raise GsToGnMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
+    raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
 def guess_catalogue_endpoint(url, md_identifier):
     """
@@ -153,7 +153,7 @@ def print_banner(args):
 
 
 def print_report(errors):
-    logger.info("Processing ended, here is a summary of the collected errors:")
+    logger.info("\nProcessing ended, here is a summary of the collected errors:")
     for err in errors:
         logger.info("* %s", err)
     logger.info("\nend time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
