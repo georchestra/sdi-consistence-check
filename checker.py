@@ -12,6 +12,7 @@ from credentials import Credentials
 from cswquerier import CachedOwsServices, CSWQuerier
 from inconsistency import Inconsistency, GnToGsLayerNotFoundInconsistency, GnToGsNoOGCWmsDefined, GnToGsNoOGCWfsDefined
 from owscheck import OwsChecker
+from bypassSSLVerification import bypassSSLVerification
 
 # Logging configuration
 logger = logging.getLogger("owschecker")
@@ -27,6 +28,7 @@ def print_layers_error(errors):
     for idx, error in enumerate(errors):
         logger.error("#%d\n  Layer: %s", idx, error.layer_name)
         logger.error("  Error: %s\n" % str(error))
+
 
 def load_credentials():
     """
@@ -71,6 +73,7 @@ def print_ows_report(owschecker):
                     inconsistencies_found, layers_inconst_percent)
         logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
+
 def print_csw_report(errors, total_mds):
     unique_mds_in_error = { error.md_uuid for error in errors }
     err_percent = floor(len(unique_mds_in_error) * 100 / total_mds) if total_mds > 0 else 0
@@ -81,7 +84,8 @@ def print_csw_report(errors, total_mds):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", help="the mode to consider (WMS, WFS, CSW)", choices=['WMS', 'WFS', 'CSW'])
+    parser.add_argument("--mode", help="the mode to consider (WMS, WFS, CSW)",
+                        choices=['WMS', 'WFS', 'CSW'], required=True)
     parser.add_argument("--inspire", help="indicates if the checks should be strict or flexible, default to flexible",
                         choices=['flexible', 'strict'], default="flexible")
     parser.add_argument("--server", help="the server to target (full URL, e.g. "
@@ -89,12 +93,13 @@ if __name__ == "__main__":
     parser.add_argument("--geoserver-to-check", help="space-separated list of geoserver hostname to check in CSW mode "
                                                      "with inspire strict option activated. "
                                                      "Ex: sdi.georchestra.org", nargs="+")
+    parser.add_argument("--disable-ssl-verification", help="Disable certificate verification", action="store_true")
+
     args = parser.parse_args(sys.argv[1:])
     load_credentials()
 
-    if (args.mode is None or args.mode not in ["WMS", "WFS", "CSW"]):
-        parser.print_help()
-        sys.exit()
+    if args.disable_ssl_verification:
+        bypassSSLVerification()
 
     print_banner(args)
 
