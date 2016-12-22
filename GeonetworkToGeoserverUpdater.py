@@ -3,6 +3,7 @@ import base64
 import logging
 
 import sys
+import warnings
 from time import strftime, localtime
 from urllib.request import urlopen, Request
 
@@ -12,7 +13,6 @@ from owslib.etree import etree
 from owslib.iso import MD_Metadata
 
 from credentials import Credentials
-from cswquerier import CSWQuerier
 from bypassSSLVerification import bypassSSLVerification
 
 # Scénario 2 Read-Write GN -> GS
@@ -27,8 +27,9 @@ from bypassSSLVerification import bypassSSLVerification
 # * Attribution (récupérer le useLimitation, et regexp sur "(.*)")
 #   md.identificationinfo[0].uselimitation[0]
 #
+from geometadata import GeoMetadata
 
-from inconsistency import GsMetadataMissingInconsistency, Inconsistency
+from inconsistency import GsMetadataMissingInconsistency, Inconsistency, GsToGnMetadataInvalidInconsistency
 
 # Logging configuration
 logger = logging.getLogger("GnToGsUpdater")
@@ -109,7 +110,7 @@ def find_metadata(resource, credentials):
     :return: a tuple (url, parsed metadata).
     """
     if resource.metadata_links is None:
-        raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
+        raise GsMetadataMissingInconsistency("%s:%s" % (resource.workspace.name, resource.name))
     for mime_type, format, url in resource.metadata_links:
         if mime_type == "text/xml" and format == "ISO19115:2003":
             # disable certificate verification
@@ -123,9 +124,13 @@ def find_metadata(resource, credentials):
                 authheader =  "Basic %s" % base64string.decode()
                 req.add_header("Authorization", authheader)
                 logger.debug("Adding credential for %s : %s" % (url, username))
+            try:
+                with urlopen(req) as fhandle:
+                    return (url, MD_Metadata(etree.parse(fhandle)))
+            except Exception as e:
+                raise GsToGnMetadataInvalidInconsistency(url, str(e),
+                                                         layer_name="%s:%s" % (resource.workspace.name, resource.name))
 
-            with urlopen(req) as fhandle:
-                return (url, MD_Metadata(etree.parse(fhandle)))
     raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
 
@@ -198,6 +203,8 @@ if __name__ == "__main__":
 
     if args.disable_ssl_verification:
         bypassSSLVerification()
+    # Disable FutureWarning from owslib
+    warnings.simplefilter("ignore", category=FutureWarning)
 
     (user, password) = creds.getFromUrl(args.geoserver)
     gscatalog = Catalog(args.geoserver + "/rest/", username=user, password=password)
@@ -213,7 +220,7 @@ if __name__ == "__main__":
             for res in resources:
                 try:
                     layer = gscatalog.get_layer(res.workspace.name + ":" + res.name)
-                    logger.debug("Inspecting layer : %s:%s (%s)" % (res.workspace.name, res.name, layer))
+                    logger.debug("Inspecting layer : %s:%s" % (res.workspace.name, res.name))
                     gn_to_gs_fix(layer, res, args.dry_run, creds)
                 except Inconsistency as e:
                     logger.debug("Inconsistency found : %s" % e)

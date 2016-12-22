@@ -83,7 +83,7 @@ class GsToGnMetadataInvalidInconsistency(Inconsistency):
         self.message = message
 
     def __str__(self):
-        return "Metadata %s not found or invalid for layer %s: %s" % (self.layer_name, self.md_url, self.message)
+        return "Metadata %s not found or invalid for layer '%s': %s" % (self.md_url, self.layer_name, self.message)
 
 
 class GsMetadataMissingInconsistency(Inconsistency):
