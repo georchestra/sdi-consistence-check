@@ -1,4 +1,5 @@
 import requests
+from requests import Session
 
 
 def bypassSSLVerification():
@@ -16,6 +17,13 @@ def bypassSSLVerification():
     requests.post = new_post_method
 
     requests.packages.urllib3.disable_warnings()
+
+    old_get_method = Session.get
+
+    def new_get_method(self, url, **kwargs):
+        return old_get_method(self, url, verify=False, **kwargs)
+
+    Session.get = new_get_method
 
 
 if __name__ == "__main__":

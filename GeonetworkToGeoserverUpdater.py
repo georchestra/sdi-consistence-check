@@ -12,6 +12,7 @@ from owslib.iso import MD_Metadata
 
 from credentials import Credentials
 from cswquerier import CSWQuerier
+from bypassSSLVerification import bypassSSLVerification
 
 # Scénario 2 Read-Write GN -> GS
 #
@@ -99,6 +100,7 @@ def update_resource(layer, resource, title, abstract, md_url_html, attribution, 
             logger.info("\t- an HTML metadata URL should have been added")
         logger.info("\n")
 
+
 def find_metadata(resource):
     """
     Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
@@ -168,20 +170,20 @@ if __name__ == "__main__":
     parser.add_argument("--mode", help="""the mode to consider:
      "full" for the whole WxS server (see the "--wxs-server" option),
      "workspace" for a workspace,
-     "layer" for a single layer""", choices=['full', 'workspace', 'layer'])
+     "layer" for a single layer""", choices=['full', 'workspace', 'layer'],
+                        required=True)
 
     parser.add_argument("--item", help="""indicates the item (layer or workspace) name, see the "mode" option.
                                        The option is ignored in "full" mode.""")
-    parser.add_argument("--geoserver", help="the GeoServer to use.")
-    parser.add_argument("--dry-run", help="Dry-run mode", action='store_true')
-    parser.set_defaults(dry_run=False)
+    parser.add_argument("--geoserver", help="the GeoServer to use.", required=True)
+    parser.add_argument("--dry-run", help="Dry-run mode", action='store_true', default=False)
+    parser.add_argument("--disable-ssl-verification", help="Disable certificate verification", action="store_true")
+    #parser.set_defaults(dry_run=False)
 
     args = parser.parse_args(sys.argv[1:])
 
-    if (args.mode is None or args.mode not in ["full", "workspace", "layer"]
-        or args.geoserver is None):
-        parser.print_help()
-        sys.exit()
+    if args.disable_ssl_verification:
+        bypassSSLVerification()
 
     gscatalog = Catalog(args.geoserver + "/rest/")
     errors = []
