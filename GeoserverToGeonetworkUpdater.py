@@ -24,21 +24,22 @@ import argparse
 import logging
 
 import sys
+import re
+
 from time import localtime
 from time import strftime
 from urllib.request import urlopen
 import xml.etree.ElementTree as etree
 
 from geoserver.catalog import Catalog
+from owslib.csw import CatalogueServiceWeb, namespaces
+from owslib.fes import PropertyIsEqualTo, PropertyIsLike
 from owslib.iso import MD_Metadata
 
-from GeonetworkToGeoserverUpdater import print_report
+from GeonetworkToGeoserverUpdater import print_report, guess_catalogue_endpoint
 from cswquerier import CSWQuerier
 from inconsistency import GsMetadataMissingInconsistency, Inconsistency
 
-GS_URL = "http://localhost:8080/geoserver"
-GN_URL = "http://localhost:8080/geonetwork"
-WS_NAME = "sf"
 
 def init_mdd_mds_mapping(cswQuerier):
   mds = cswQuerier.get_service_mds()
@@ -60,10 +61,7 @@ logger.addHandler(out_hdlr)
 logger.setLevel(logging.INFO)
 
 # these variables are global to have a hand easily on cached resources obtained remotely
-
-
-# See https://github.com/georchestra/georchestra/issues/756#issuecomment-58194935
-# on how to get MDs from MDD uuid via a CSW getRecords operation
+# TODO: define
 
 def print_banner(args):
     logger.info("\nGeoserver To Geonetwork Updater\n\n")
@@ -74,7 +72,7 @@ def print_banner(args):
     logger.info("\n\n")
 
 
-# TODO copy-pasted from GeonetworkToGeoserverUpdater, need to find a way to share code across the codebase.
+# TODO copy-pasted from GeonetworkToGeoserverUpdater, we need to find a way to share code across the codebase.
 def find_metadata(resource):
     """
     Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
@@ -88,6 +86,38 @@ def find_metadata(resource):
             with urlopen(url) as fhandle:
                 return (url, MD_Metadata(etree.parse(fhandle)))
     raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
+
+
+def guess_geonetwork_url(url):
+    m = re.search('(.*\/geonetwork\/).*', url)
+    return m.group(1)
+
+
+def guess_related_service_metadata(md_url, md):
+    """
+    Retrieves the associated metadata from the same catalog (assuming it is a GeoNetwork)
+    :param md_url: the original metadata Url
+    :param md: the parsed metadata
+    :return a list of service metadata:
+    """
+    gn_cswurl = "%ssrv/eng/csw" % guess_geonetwork_url(md_url)
+    # TODO: Might be GeoNetwork-proprietary
+    #
+    # TODO 2: 2 cases: either the MDD is not referenced onto a MDS (operatesOn), or the MDS does not exist yet
+    # So, which strategy to adopt ?
+    # * strategy #1: attempt to find a MDS, error if there is no MDS
+    #
+    # * strategy #2: gets all the MDS from the catalog, then finds the one which references the service
+    # via the following xpath:
+    # /gmd:MD_Metadata/gmd:distributionInfo/gmd:MD_Distribution/gmd:transferOptions/gmd:MD_DigitalTransferOptions/
+    #     gmd:onLine/gmd:CI_OnlineResource/gmd:linkage/gmd:URL
+
+    operates_on_filter = PropertyIsEqualTo('csw:operatesOnIdentifier', md.identifier)
+    linkage_filter = PropertyIsLike('linkage', 'http://localhost:8080/geoserver/%')
+    # TODO: see how to cache results ?
+    csw_q = CSWQuerier(gn_cswurl)
+    mds = csw_q.get_all_records(constraint=[PropertyIsEqualTo("Type", "service")])
+    return mds
 
 def check_catalog(res, layer, dry_run):
     logger.info("%s", layer.name)
@@ -118,8 +148,10 @@ if __name__ == "__main__":
         resources = gscatalog.get_resources(workspace=workspace)
         for res in resources:
             try:
-                md = find_metadata(res)
-                print(md)
+                md_url, md = find_metadata(res)
+                layer = gscatalog.get_layer(name="%s:%s" % (res.workspace.name, res.name))
+                linked_mds = guess_related_service_metadata(md_url, md)
+                check_catalog(res, layer, args.dry_run)
 
             except Inconsistency as e:
                 errors.append(e)

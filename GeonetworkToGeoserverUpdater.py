@@ -59,7 +59,8 @@ def update_resource(layer, resource, title, abstract, md_url_html, attribution, 
     if resource.abstract is None or len(resource.abstract) < len(abstract):
         resource.abstract = abstract
         upd_abstract = True
-    if layer.attribution is None or len(layer.attribution["title"]) < len(attribution):
+    if layer.attribution is None or layer.attribution['title'] is None \
+            or len(layer.attribution["title"]) < len(attribution):
         upd_attribution = True
         if layer.attribution is None:
             layer.attribution = {"title": attribution}
@@ -112,6 +113,7 @@ def find_metadata(resource):
                 return (url, MD_Metadata(etree.parse(fhandle)))
     raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
+
 def guess_catalogue_endpoint(url, md_identifier):
     """
     Given a URL, try to guess the catalogue endpoint. This method is used to guess the HTML URL for the metadata.
@@ -124,6 +126,7 @@ def guess_catalogue_endpoint(url, md_identifier):
     m = re.search('(.*\/geonetwork\/).*', url)
     return "%s?uuid=%s" % (m.group(1), md_identifier)
 
+
 def extract_attribution(str):
     try:
         m = re.search('"(.*)"', str)
@@ -131,6 +134,7 @@ def extract_attribution(str):
     except:
         logger.error("unable to extract the attribution, using the whole otherConstraint field", e)
         return str
+
 
 def gn_to_gs_fix(layer, resource, dry_run):
     url, md = find_metadata(resource)
@@ -140,6 +144,7 @@ def gn_to_gs_fix(layer, resource, dry_run):
     md_attribution = extract_attribution(md.identification.otherconstraints[0]) \
         if (len(md.identification.otherconstraints)) > 0 else ""
     update_resource(layer, resource, md_title, md_abstract, md_url_html, md_attribution, dry_run)
+
 
 def print_banner(args):
     logger.info("\nGeoNetwork To Geoserver Updater\n\n")

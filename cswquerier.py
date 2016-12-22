@@ -17,7 +17,7 @@ class CSWQuerier:
     max_records = 100
     is_dataset = [PropertyIsEqualTo("Type", "dataset")]
     is_service = [PropertyIsEqualTo("Type", "service")]
-    non_havested = PropertyIsEqualTo("_isHarvested", "n")
+    non_harvested = PropertyIsEqualTo("_isHarvested", "n")
 
     protocol_regexp = re.compile("^OGC:(?P<type>WMS|WFS)(?:-(?P<version>\d+(?:\.\d+)*)(?:-[\w-]+)?)?$", re.IGNORECASE)
 
@@ -27,7 +27,7 @@ class CSWQuerier:
             self.logger = logger
         else:
             self.logger = logging.getLogger("cswquerier")
-            self.logger.addHandler(logging.nullHandler())
+            self.logger.addHandler(logging.NullHandler())
         if cached_ows_services is None:
             self.owsServices = CachedOwsServices(credentials=credentials)
         else:
@@ -55,7 +55,7 @@ class CSWQuerier:
 
     def generate_filter(self):
         if len(self.mds_not_parsable) == 0:
-            filters = [self.is_dataset, self.non_havested]
+            filters = [self.is_dataset, self.non_harvested]
             return self.is_dataset
         elif len(self.mds_not_parsable) == 1:
             filters = [self.is_dataset,
@@ -88,6 +88,11 @@ class CSWQuerier:
         return self.csw.records
 
     def get_all_records(self, constraint):
+        """
+        Gets all records, also managing the pagination against the remote CSW server.
+        :param constraint: the constraint array to be passed to OWSLib getrecords2.
+        :return: a hashmap with UUID as key, the parsed metadata as value.
+        """
         startpos = 0
         mds = {}
         while True:
