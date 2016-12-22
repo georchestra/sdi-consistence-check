@@ -4,11 +4,11 @@ import logging
 
 import sys
 from time import strftime, localtime
-import xml.etree.ElementTree as etree
 from urllib.request import urlopen, Request
 
 import re
 from geoserver.catalog import Catalog
+from owslib.etree import etree
 from owslib.iso import MD_Metadata
 
 from credentials import Credentials
@@ -125,7 +125,6 @@ def find_metadata(resource, credentials):
                 logger.debug("Adding credential for %s : %s" % (url, username))
 
             with urlopen(req) as fhandle:
-                # logger.debug("MD found at %s : %s" % (url, fhandle.read().decode()))
                 return (url, MD_Metadata(etree.parse(fhandle)))
     raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
@@ -148,7 +147,7 @@ def extract_attribution(str):
         m = re.search('"(.*)"', str)
         return m.group(1)
     except:
-        logger.error("unable to extract the attribution, using the whole otherConstraint field", e)
+        logger.error("unable to extract the attribution, using the whole otherConstraint field")
         return str
 
 
