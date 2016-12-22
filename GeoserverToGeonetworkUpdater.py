@@ -22,23 +22,25 @@
 #
 import argparse
 import logging
-
-import sys
 import re
-
+import sys
+import xml.etree.ElementTree as etree
 from time import localtime
 from time import strftime
+from urllib.parse import urlparse
 from urllib.request import urlopen
-import xml.etree.ElementTree as etree
 
 from geoserver.catalog import Catalog
-from owslib.csw import CatalogueServiceWeb, namespaces
+from mako.template import Template
+from owslib.csw import CatalogueServiceWeb
 from owslib.fes import PropertyIsEqualTo, PropertyIsLike
 from owslib.iso import MD_Metadata
 
-from GeonetworkToGeoserverUpdater import print_report, guess_catalogue_endpoint
+from GeonetworkToGeoserverUpdater import print_report
+from credentials import Credentials
 from cswquerier import CSWQuerier
-from inconsistency import GsMetadataMissingInconsistency, Inconsistency
+from inconsistency import GsMetadataMissingInconsistency, GsToGnUnableToCreateServiceMetadataInconsistency, \
+    Inconsistency
 
 
 def init_mdd_mds_mapping(cswQuerier):
@@ -63,19 +65,27 @@ logger.setLevel(logging.INFO)
 # these variables are global to have a hand easily on cached resources obtained remotely
 # TODO: define
 
+
 def print_banner(args):
+    """
+    Show the banner
+    :param args: the argument object passed to the script.
+    :return: nothing.
+    """
     logger.info("\nGeoserver To Geonetwork Updater\n\n")
     logger.info("workspace to query: %s", args.workspace)
     logger.info("GeoServer: %s", args.geoserver)
+    logger.info("GeoNetwork where to insert created metadata: %s", args.geonetwork)
     logger.info("dry-run: %s", args.dry_run)
     logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
     logger.info("\n\n")
 
 
-# TODO copy-pasted from GeonetworkToGeoserverUpdater, we need to find a way to share code across the codebase.
+# TODO copy-pasted from GeonetworkToGeoserverUpdater,
+# we need to find a way to share code across the codebase.
 def find_metadata(resource):
     """
-    Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
+    Retrieves and parses a remote metadata, given a gsconfig object (resource or layergroup).
     :param resource: an object from the gsconfig python library (either a resource or a layergroup)
     :return: a tuple (url, parsed metadata).
     """
@@ -89,6 +99,11 @@ def find_metadata(resource):
 
 
 def guess_geonetwork_url(url):
+    """
+    Guesses the geonetwork URL.
+    :param url: the URL where the GeoNetwork base URL has to be guessed.
+    :return: the url found.
+    """
     m = re.search('(.*\/geonetwork\/).*', url)
     return m.group(1)
 
@@ -101,9 +116,7 @@ def guess_related_service_metadata(md_url, md):
     :return a list of service metadata:
     """
     gn_cswurl = "%ssrv/eng/csw" % guess_geonetwork_url(md_url)
-    # TODO: Might be GeoNetwork-proprietary
-    #
-    # TODO 2: 2 cases: either the MDD is not referenced onto a MDS (operatesOn), or the MDS does not exist yet
+    # TODO 2 cases: either the MDD is not referenced onto a MDS (operatesOn), or the MDS does not exist yet
     # So, which strategy to adopt ?
     # * strategy #1: attempt to find a MDS, error if there is no MDS
     #
@@ -111,27 +124,67 @@ def guess_related_service_metadata(md_url, md):
     # via the following xpath:
     # /gmd:MD_Metadata/gmd:distributionInfo/gmd:MD_Distribution/gmd:transferOptions/gmd:MD_DigitalTransferOptions/
     #     gmd:onLine/gmd:CI_OnlineResource/gmd:linkage/gmd:URL
-
-    operates_on_filter = PropertyIsEqualTo('csw:operatesOnIdentifier', md.identifier)
-    linkage_filter = PropertyIsLike('linkage', 'http://localhost:8080/geoserver/%')
-    # TODO: see how to cache results ?
+    # TODO: how to cache results ?
     csw_q = CSWQuerier(gn_cswurl)
     mds = csw_q.get_all_records(constraint=[PropertyIsEqualTo("Type", "service")])
     return mds
 
-def check_catalog(res, layer, dry_run):
-    logger.info("%s", layer.name)
-    pass
+
+def create_service_metadata_from_template(data):
+    """
+        Returns a string suitable for a service metadata creation via CSW-T insert operation.
+
+    :param data: a hashmap which has the following format:
+    {
+      'file_identifier': md_uuid,
+      'current_date': "YYY-mm-dd",
+      'service_name': the name of the GS workspace,
+      'service_url': the service URL (see remark in comment above, should be used carefully
+                     as identifier to get the MD),
+      'current_datetime': "YYYY-mm-dd HH:mm",
+      'abstract': abstract for the metadata,
+      'layers': [
+        'mdd_uuid': the uuid of the data metadata,
+        'mdd_url': the URL of the data metadata,
+        'name': the layer name
+      ]
+    }
+    :return: a string representing the XML service metadata
+    """
+    return Template(filename="template/service-metadata.xml").render(**data)
+
+
+def insert_metadata(gn_url, workspace, record, credentials=Credentials()):
+    """
+    Inserts a metadata in a catalogue, given its base URL.
+    :param gn_url: the base URL to the GeoNetwork.
+    :param workspace: the workspace name queried onto the GeoServer
+    :param record: the metadata to be inserted
+    :param credentials: the credentials object
+    :return: True if success, raises an exception otherwise.
+    """
+    try:
+        u = urlparse(gn_url)
+        (username, password) = credentials.get(u.hostname)
+        csw = CatalogueServiceWeb(gn_url + "/srv/eng/csw-publication", username=username, password=password)
+        csw.transaction(ttype="insert", typename="gmd:MD_Metadata", record=record)
+    except Exception as e:
+        logger.error(e)
+        raise GsToGnUnableToCreateServiceMetadataInconsistency(workspace, gn_url, e)
+    return True
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--workspace", help="""indicates the GeoServer workspace name.""")
     parser.add_argument("--geoserver", help="the GeoServer URL to use (e.g. 'http://localhost:8080/geoserver').")
+    parser.add_argument("--geonetwork", help="the Geonetwork URL where the created metadatas have to be stored"
+                                             " (e.g. 'http://localhost:8080/geonetwork').")
     parser.add_argument("--dry-run", help="Dry-run mode", action='store_true')
     parser.set_defaults(dry_run=False)
 
     args = parser.parse_args(sys.argv[1:])
-    if (args.workspace is None or args.geoserver is None):
+    if (args.workspace is None or args.geoserver is None or args.geonetwork is None):
         parser.print_help()
         sys.exit()
 
@@ -139,6 +192,32 @@ if __name__ == "__main__":
 
     gscatalog = Catalog(args.geoserver + "/rest/")
     errors = []
+
+    # Example of service MD publishing:
+    #
+    # data = {
+    #            'file_identifier': '123456',
+    #            'current_date': "YYY-mm-dd",
+    #            'service_name': "sf",
+    #            'service_url': 'http://localhost:8080/geoserver/sf/ows?service=wms',
+    #            'current_datetime': "YYYY-mm-dd HH:mm",
+    #                            'abstract': "Métadonnée de service WMS pour le workspace sf",
+    #            'layers': [{
+    #                 'mdd_uuid': "789101112",
+    #                 'mdd_url': "http://localhost:8080/geonetwork/srv/eng/xml.metadata.get?uuid=789101112",
+    #                 'name': 'roads'
+    #            },
+    #                {
+    #                    'mdd_uuid': "yet-another-mdd",
+    #                    'mdd_url': "http://localhost:8080/geonetwork/srv/eng/xml.metadata.get?uuid=yet-another-mdd",
+    #                    'name': 'yet-another-mdd'
+    #                },
+    #            ]
+    # }
+    # new_service_md = create_service_metadata_from_template(data)
+    # insert_metadata("http://localhost:8080/geonetwork", "sf",
+    #                 new_service_md, Credentials(logger=logger))
+    # sys.exit()
 
     workspace = gscatalog.get_workspace(name=args.workspace)
     if workspace is None:
@@ -151,12 +230,13 @@ if __name__ == "__main__":
                 md_url, md = find_metadata(res)
                 layer = gscatalog.get_layer(name="%s:%s" % (res.workspace.name, res.name))
                 linked_mds = guess_related_service_metadata(md_url, md)
-                check_catalog(res, layer, args.dry_run)
-
+                # TODO: add the missing logic for the current scenario here.
+                # if linked_mds is None, then creates the MD, else ensures the
+                # data MD can be found in the operatesOn from the returned service MD.
             except Inconsistency as e:
                 errors.append(e)
 
-    # cswquerier object will depend on the MD URL obtained from the GeoServer
+    # cswquerier object will depend on the MD URL obtained from the GeoServer.
     # We can imagine having more than one catalogue instance, then we need
     # to find a way to keep the MDD to MDS mapping for each of these catalogues.
     #

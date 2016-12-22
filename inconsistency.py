@@ -98,3 +98,17 @@ class GsMetadataMissingInconsistency(Inconsistency):
     def __str__(self):
         return "No metadata defined for layer %s" % self.layer_name
 
+
+# Scenario 3: Inconsistency to keep track of errors when trying to insert a metadata
+class GsToGnUnableToCreateServiceMetadataInconsistency(Inconsistency):
+    """
+    Class which gathers errors when trying to CSW-T insert a service metadata.
+    """
+    def __init__(self, workspace, catalogue_url, caused_by):
+        self.workspace = workspace
+        self.catalogue_url = catalogue_url
+        self.caused_by = caused_by
+
+    def __str__(self):
+        return "Unable to save the service metadata for workspace \"%s\" into %s: %s" % (self.workspace,
+            self.catalogue_url, self.caused_by)

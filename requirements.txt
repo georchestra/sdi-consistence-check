@@ -6,4 +6,5 @@ owslib
 # This one should be, see https://github.com/boundlessgeo/gsconfig/issues/98#issuecomment-185063984
 gsconfig-py3
 
+mako==1.0.6
 
