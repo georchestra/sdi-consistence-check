@@ -1,9 +1,28 @@
+import os
 from urllib.parse import urlparse
 
 
 class Credentials:
-    def __init__(self):
+    def __init__(self, logger=None):
+        """
+        Loads the credentials file, which consists of a text file
+        formatted with "hostname username password" and whose default location is set to
+        ~/.sdichecker.
+        """
         self._credentials = {}
+
+        try:
+            with open(os.getenv("HOME") + "/.sdichecker") as file:
+                for line in file:
+                    try:
+                        (hostname, user, password) = line.rstrip("\n").split(" ", 3)
+                        self.add(hostname, user, password)
+                    except ValueError:
+                        pass
+        except FileNotFoundError:
+            if logger is not None:
+                logger.info("No ~/.sdichecker file found, skipping credentials definition.")
+            pass
 
     def add(self, site, username, password):
         self._credentials[site] = (username, password)

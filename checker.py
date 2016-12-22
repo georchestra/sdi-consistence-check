@@ -21,35 +21,11 @@ out_hdlr.setLevel(logging.INFO)
 logger.addHandler(out_hdlr)
 logger.setLevel(logging.INFO)
 
-creds = Credentials()
-
 
 def print_layers_error(errors):
     for idx, error in enumerate(errors):
         logger.error("#%d\n  Layer: %s", idx, error.layer_name)
         logger.error("  Error: %s\n" % str(error))
-
-
-def load_credentials():
-    """
-    Loads the credentials file, which consists of a text file
-    formatted with "hostname username password" and whose default location is set to
-    ~/.sdichecker.
-
-    :return: None.
-    """
-    try:
-        with open(os.getenv("HOME") + "/.sdichecker") as file:
-            for line in file:
-                try:
-                    (hostname, user, password) = line.rstrip("\n").split(" ", 3)
-                    creds.add(hostname, user, password)
-                except ValueError:
-                    pass
-    except FileNotFoundError:
-        logger.info("No ~/.sdichecker file found, skipping credentials definition.")
-        pass
-
 
 def print_banner(args):
     logger.info("\nSDI check\n\n")
@@ -96,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("--disable-ssl-verification", help="Disable certificate verification", action="store_true")
 
     args = parser.parse_args(sys.argv[1:])
-    load_credentials()
+    creds = Credentials(logger=logger)
 
     if args.disable_ssl_verification:
         bypassSSLVerification()

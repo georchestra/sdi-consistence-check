@@ -1,10 +1,11 @@
 import argparse
+import base64
 import logging
 
 import sys
 from time import strftime, localtime
 import xml.etree.ElementTree as etree
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 import re
 from geoserver.catalog import Catalog
@@ -101,7 +102,7 @@ def update_resource(layer, resource, title, abstract, md_url_html, attribution, 
         logger.info("\n")
 
 
-def find_metadata(resource):
+def find_metadata(resource, credentials):
     """
     Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
     :param resource: an object from the gsconfig python library (either a resource or a layergroup)
@@ -111,7 +112,20 @@ def find_metadata(resource):
         raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
     for mime_type, format, url in resource.metadata_links:
         if mime_type == "text/xml" and format == "ISO19115:2003":
-            with urlopen(url) as fhandle:
+            # disable certificate verification
+            # ctx = ssl.create_default_context()
+            # ctx.check_hostname = False
+            # ctx.verify_mode = ssl.CERT_NONE
+            req = Request(url)
+            username, password = credentials.getFromUrl(url)
+            if username is not None:
+                base64string = base64.b64encode(('%s:%s' % (username, password)).encode())
+                authheader =  "Basic %s" % base64string.decode()
+                req.add_header("Authorization", authheader)
+                logger.debug("Adding credential for %s : %s" % (url, username))
+
+            with urlopen(req) as fhandle:
+                # logger.debug("MD found at %s : %s" % (url, fhandle.read().decode()))
                 return (url, MD_Metadata(etree.parse(fhandle)))
     raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
@@ -138,8 +152,8 @@ def extract_attribution(str):
         return str
 
 
-def gn_to_gs_fix(layer, resource, dry_run):
-    url, md = find_metadata(resource)
+def gn_to_gs_fix(layer, resource, dry_run, credentials):
+    url, md = find_metadata(resource, credentials)
     md_title = md.identificationinfo[0].title if len(md.identificationinfo) > 0 else ""
     md_abstract = md.identificationinfo[0].abstract if len(md.identificationinfo) > 0 else ""
     md_url_html = guess_catalogue_endpoint(url, md.identifier)
@@ -181,11 +195,13 @@ if __name__ == "__main__":
     #parser.set_defaults(dry_run=False)
 
     args = parser.parse_args(sys.argv[1:])
+    creds = Credentials(logger=logger)
 
     if args.disable_ssl_verification:
         bypassSSLVerification()
 
-    gscatalog = Catalog(args.geoserver + "/rest/")
+    (user, password) = creds.getFromUrl(args.geoserver)
+    gscatalog = Catalog(args.geoserver + "/rest/", username=user, password=password)
     errors = []
     # Whole geoserver catalog
     if args.mode == "full":
@@ -193,17 +209,20 @@ if __name__ == "__main__":
         # Layers
         workspaces = gscatalog.get_workspaces()
         for ws in workspaces:
+            logger.debug("Inspecting workspace : %s" % ws)
             resources = gscatalog.get_resources(workspace=ws)
             for res in resources:
                 try:
                     layer = gscatalog.get_layer(res.workspace.name + ":" + res.name)
-                    gn_to_gs_fix(layer, res, args.dry_run)
+                    logger.debug("Inspecting layer : %s:%s (%s)" % (res.workspace.name, res.name, layer))
+                    gn_to_gs_fix(layer, res, args.dry_run, creds)
                 except Inconsistency as e:
+                    logger.debug("Inconsistency found : %s" % e)
                     errors.append(e)
         # Layer groups TODO: not managed yet by gsconfig
         # lgroups = gscatalog.get_layergroups()
         # for lg in lgroups:
-        #     gn_to_gs_fix(lg, args.dry_run)
+        #     gn_to_gs_fix(lg, args.dry_run, creds)
     # Workspace
     elif args.mode == "workspace":
         if args.item is None:
@@ -220,7 +239,7 @@ if __name__ == "__main__":
             for res in resources:
                 try:
                     layer = gscatalog.get_layer(res.workspace.name + ":" + res.name)
-                    gn_to_gs_fix(layer, res, args.dry_run)
+                    gn_to_gs_fix(layer, res, args.dry_run, creds)
                 except Inconsistency as e:
                     errors.append(e)
     # Single layer
@@ -261,7 +280,7 @@ if __name__ == "__main__":
             logger.debug("Resource \"%s\" found, processing ..." % resource_found.name)
             try:
                 layer = gscatalog.get_layer(resource_found.workspace.name + ":" + resource_found.name)
-                gn_to_gs_fix(layer, resource_found, args.dry_run)
+                gn_to_gs_fix(layer, resource_found, args.dry_run, creds)
             except Inconsistency as e:
                 errors.append(e)
     print_report(errors)
