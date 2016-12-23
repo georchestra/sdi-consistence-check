@@ -162,7 +162,6 @@ if __name__ == "__main__":
     parser.add_argument("--geoserver", help="the GeoServer to use.", required=True)
     parser.add_argument("--dry-run", help="Dry-run mode", action='store_true', default=False)
     parser.add_argument("--disable-ssl-verification", help="Disable certificate verification", action="store_true")
-    #parser.set_defaults(dry_run=False)
 
     args = parser.parse_args(sys.argv[1:])
     creds = Credentials(logger=logger)

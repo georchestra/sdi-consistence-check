@@ -24,6 +24,7 @@ import argparse
 import logging
 import re
 import sys
+import warnings
 from time import localtime
 from time import strftime
 from urllib.parse import urlparse
@@ -38,6 +39,7 @@ from credentials import Credentials
 from cswquerier import CSWQuerier
 from inconsistency import GsToGnUnableToCreateServiceMetadataInconsistency, Inconsistency
 from utils import find_metadata
+from bypassSSLVerification import bypassSSLVerification
 
 
 def init_mdd_mds_mapping(cswQuerier):
@@ -156,21 +158,26 @@ def insert_metadata(gn_url, workspace, record, credentials=Credentials()):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--workspace", help="""indicates the GeoServer workspace name.""")
-    parser.add_argument("--geoserver", help="the GeoServer URL to use (e.g. 'http://localhost:8080/geoserver').")
+    parser.add_argument("--workspace", help="indicates the GeoServer workspace name.", required=True)
+    parser.add_argument("--geoserver", help="the GeoServer URL to use (e.g. 'http://localhost:8080/geoserver').", required=True)
     parser.add_argument("--geonetwork", help="the Geonetwork URL where the created metadatas have to be stored"
-                                             " (e.g. 'http://localhost:8080/geonetwork').")
-    parser.add_argument("--dry-run", help="Dry-run mode", action='store_true')
-    parser.set_defaults(dry_run=False)
+                                             " (e.g. 'http://localhost:8080/geonetwork').", required=True)
+    parser.add_argument("--dry-run", help="Dry-run mode", action='store_true', default=False)
+    parser.add_argument("--disable-ssl-verification", help="Disable certificate verification", action="store_true")
 
     args = parser.parse_args(sys.argv[1:])
-    if (args.workspace is None or args.geoserver is None or args.geonetwork is None):
-        parser.print_help()
-        sys.exit()
-
     print_banner(args)
 
-    gscatalog = Catalog(args.geoserver + "/rest/")
+    if args.disable_ssl_verification:
+        bypassSSLVerification()
+    # Disable FutureWarning from owslib
+    warnings.simplefilter("ignore", category=FutureWarning)
+
+    # Load credentials
+    creds = Credentials(logger=logger)
+    (user, password) = creds.getFromUrl(args.geoserver)
+
+    gscatalog = Catalog(args.geoserver + "/rest/", username=user, password=password)
     errors = []
 
     # Example of service MD publishing:
@@ -207,7 +214,7 @@ if __name__ == "__main__":
         resources = gscatalog.get_resources(workspace=workspace)
         for res in resources:
             try:
-                md_url, md = find_metadata(res)
+                md_url, md = find_metadata(res, creds)
                 layer = gscatalog.get_layer(name="%s:%s" % (res.workspace.name, res.name))
                 linked_mds = guess_related_service_metadata(md_url, md)
                 # TODO: add the missing logic for the current scenario here.
