@@ -15,8 +15,8 @@ from owscheck import CachedOwsServices
 
 class CSWQuerier:
     max_records = 100
-    is_dataset = [PropertyIsEqualTo("Type", "dataset")]
-    is_service = [PropertyIsEqualTo("Type", "service")]
+    is_dataset = PropertyIsEqualTo("Type", "dataset")
+    is_service = PropertyIsEqualTo("Type", "service")
     non_harvested = PropertyIsEqualTo("_isHarvested", "n")
 
     protocol_regexp = re.compile("^OGC:(?P<type>WMS|WFS)(?:-(?P<version>\d+(?:\.\d+)*)(?:-[\w-]+)?)?$", re.IGNORECASE)
@@ -40,8 +40,8 @@ class CSWQuerier:
         self.start = 0
         self.md_count = -1
 
-    def get_records(self):
-        self.csw.getrecords2(constraints=self.generate_filter(),
+    def get_dataset_records(self):
+        self.csw.getrecords2(constraints=[self.is_dataset],
                              esn='full',
                              startposition=self.start,
                              maxrecords=self.max_records)
@@ -53,24 +53,10 @@ class CSWQuerier:
     def get_md(self, uuid):
         return self.csw.records[uuid]
 
-    def generate_filter(self):
-        if len(self.mds_not_parsable) == 0:
-            filters = [self.is_dataset, self.non_harvested]
-            return self.is_dataset
-        elif len(self.mds_not_parsable) == 1:
-            filters = [self.is_dataset,
-                       # self.non_havested,
-                       Not([PropertyIsEqualTo("truite", self.mds_not_parsable[0])])]
-        else:
-            filters = [self.is_dataset,
-                       # self.non_havested,
-                       Not(Or([PropertyIsEqualTo("fileIdentifier", uuid) for uuid in self.mds_not_parsable]))]
-        return [And(filters)]
-
     def get_service_mds(self):
         # do not take care of FutureWarnings issued by OWSLib
         with warnings.catch_warnings():
-            self.csw.getrecords2(constraints=self.is_service,
+            self.csw.getrecords2(constraints=[self.is_service],
                                  esn='full',
                                  outputschema=namespaces['gmd'],
                                  startposition=0,
@@ -80,7 +66,7 @@ class CSWQuerier:
 
 
     def get_data_mds(self):
-        self.csw.getrecords2(constraints=self.is_dataset,
+        self.csw.getrecords2(constraints=[self.is_dataset],
                              esn='full',
                              outputschema=namespaces['gmd'],
                              startposition=0,

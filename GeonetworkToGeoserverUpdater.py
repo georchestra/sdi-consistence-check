@@ -1,17 +1,17 @@
 import argparse
 import logging
-
+import re
 import sys
 import warnings
 from time import strftime, localtime
 
-import re
 from geoserver.catalog import Catalog
+
 
 from credentials import Credentials
 from bypassSSLVerification import bypassSSLVerification
 from inconsistency import Inconsistency
-from utils import find_metadata
+from utils import find_data_metadata
 
 # Scénario 2 Read-Write GN -> GS
 #
@@ -123,7 +123,7 @@ def extract_attribution(str):
 
 
 def gn_to_gs_fix(layer, resource, dry_run, credentials):
-    url, md = find_metadata(resource, credentials)
+    url, md = find_data_metadata(resource, credentials)
     md_title = md.identificationinfo[0].title if len(md.identificationinfo) > 0 else ""
     md_abstract = md.identificationinfo[0].abstract if len(md.identificationinfo) > 0 else ""
     md_url_html = guess_catalogue_endpoint(url, md.identifier)

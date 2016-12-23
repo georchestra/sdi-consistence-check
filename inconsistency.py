@@ -112,3 +112,17 @@ class GsToGnUnableToCreateServiceMetadataInconsistency(Inconsistency):
     def __str__(self):
         return "Unable to save the service metadata for workspace \"%s\" into %s: %s" % (self.workspace,
             self.catalogue_url, self.caused_by)
+
+class GsToGnUnableToUpdateServiceMetadataInconsistency(Inconsistency):
+    """
+    Class which gathers errors when trying to CSW-T update a service metadata.
+    """
+    def __init__(self, workspace, mds_uuid, catalogue_url, caused_by):
+        self.workspace = workspace
+        self.catalogue_url = catalogue_url
+        self.caused_by = caused_by
+        self.mds_uuid = mds_uuid
+
+    def __str__(self):
+        return "Unable to update the service metadata (uuid: %s) for workspace \"%s\" into %s: %s" % (self.mds_uuid,
+            self.workspace, self.catalogue_url, self.caused_by)

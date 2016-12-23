@@ -6,7 +6,7 @@ from owslib.etree import etree
 from inconsistency import GsMetadataMissingInconsistency, GsToGnMetadataInvalidInconsistency
 
 
-def find_metadata(resource, credentials):
+def find_data_metadata(resource, credentials):
     """
     Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
     :param resource: an object from the gsconfig python library (either a resource or a layergroup)

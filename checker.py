@@ -103,9 +103,9 @@ if __name__ == "__main__":
 
         if args.inspire == "strict":
             # Step 1: get all data metadata
-            datamd = csw_q.get_all_records(constraint=csw_q.is_dataset)
+            datamd = csw_q.get_all_records(constraint=[csw_q.is_dataset])
             # Step 2: maps data metadatas to service MDs
-            servicesmd = csw_q.get_all_records(constraint=csw_q.is_service)
+            servicesmd = csw_q.get_all_records(constraint=[csw_q.is_service])
             data_to_service_map = {}
             for uuid, md in servicesmd.items():
                 for oon in md.identificationinfo[0].operateson:
@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
         elif args.inspire == "flexible":
             while True:
-                res = csw_q.get_records()
+                res = csw_q.get_dataset_records()
                 total_mds += len(res)
                 for idx, uuid in enumerate(res):
                     current_md = res[uuid]
