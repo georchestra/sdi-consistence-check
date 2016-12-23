@@ -253,7 +253,11 @@ if __name__ == "__main__":
                             logger.error("Unable to find all the data metadata for some layers on workspace %s,"
                                          "generated service metadata might be incomplete.", args.workspace)
                     new_srv_md = create_service_metadata_from_template(data)
-                    insert_metadata(args.geonetwork, args.workspace, new_srv_md, creds)
+                    if not args.dry_run:
+                        insert_metadata(args.geonetwork, args.workspace, new_srv_md, creds)
+                    else:
+                        logger.info("Dry-run: would have created a service metadata on workspace %s",
+                                    linked_md.identifier, md.identifier)
                 else:
                     # service metadata found for the current workspace
                     # check if the mds references (operatesOn) the MDD
