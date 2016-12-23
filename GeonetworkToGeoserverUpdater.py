@@ -1,19 +1,17 @@
 import argparse
-import base64
 import logging
 
 import sys
 import warnings
 from time import strftime, localtime
-from urllib.request import urlopen, Request
 
 import re
 from geoserver.catalog import Catalog
-from owslib.etree import etree
-from owslib.iso import MD_Metadata
 
 from credentials import Credentials
 from bypassSSLVerification import bypassSSLVerification
+from inconsistency import Inconsistency
+from utils import find_metadata
 
 # Scénario 2 Read-Write GN -> GS
 #
@@ -27,9 +25,6 @@ from bypassSSLVerification import bypassSSLVerification
 # * Attribution (récupérer le useLimitation, et regexp sur "(.*)")
 #   md.identificationinfo[0].uselimitation[0]
 #
-from geometadata import GeoMetadata
-
-from inconsistency import GsMetadataMissingInconsistency, Inconsistency, GsToGnMetadataInvalidInconsistency
 
 # Logging configuration
 logger = logging.getLogger("GnToGsUpdater")
@@ -103,35 +98,6 @@ def update_resource(layer, resource, title, abstract, md_url_html, attribution, 
         logger.info("\n")
 
 
-def find_metadata(resource, credentials):
-    """
-    Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
-    :param resource: an object from the gsconfig python library (either a resource or a layergroup)
-    :return: a tuple (url, parsed metadata).
-    """
-    if resource.metadata_links is None:
-        raise GsMetadataMissingInconsistency("%s:%s" % (resource.workspace.name, resource.name))
-    for mime_type, format, url in resource.metadata_links:
-        if mime_type == "text/xml" and format == "ISO19115:2003":
-            # disable certificate verification
-            # ctx = ssl.create_default_context()
-            # ctx.check_hostname = False
-            # ctx.verify_mode = ssl.CERT_NONE
-            req = Request(url)
-            username, password = credentials.getFromUrl(url)
-            if username is not None:
-                base64string = base64.b64encode(('%s:%s' % (username, password)).encode())
-                authheader =  "Basic %s" % base64string.decode()
-                req.add_header("Authorization", authheader)
-                logger.debug("Adding credential for %s : %s" % (url, username))
-            try:
-                with urlopen(req) as fhandle:
-                    return (url, MD_Metadata(etree.parse(fhandle)))
-            except Exception as e:
-                raise GsToGnMetadataInvalidInconsistency(url, str(e),
-                                                         layer_name="%s:%s" % (resource.workspace.name, resource.name))
-
-    raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
 
 def guess_catalogue_endpoint(url, md_identifier):

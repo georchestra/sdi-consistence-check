@@ -24,23 +24,20 @@ import argparse
 import logging
 import re
 import sys
-import xml.etree.ElementTree as etree
 from time import localtime
 from time import strftime
 from urllib.parse import urlparse
-from urllib.request import urlopen
 
 from geoserver.catalog import Catalog
 from mako.template import Template
 from owslib.csw import CatalogueServiceWeb
-from owslib.fes import PropertyIsEqualTo, PropertyIsLike
-from owslib.iso import MD_Metadata
+from owslib.fes import PropertyIsEqualTo
 
 from GeonetworkToGeoserverUpdater import print_report
 from credentials import Credentials
 from cswquerier import CSWQuerier
-from inconsistency import GsMetadataMissingInconsistency, GsToGnUnableToCreateServiceMetadataInconsistency, \
-    Inconsistency
+from inconsistency import GsToGnUnableToCreateServiceMetadataInconsistency, Inconsistency
+from utils import find_metadata
 
 
 def init_mdd_mds_mapping(cswQuerier):
@@ -79,23 +76,6 @@ def print_banner(args):
     logger.info("dry-run: %s", args.dry_run)
     logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
     logger.info("\n\n")
-
-
-# TODO copy-pasted from GeonetworkToGeoserverUpdater,
-# we need to find a way to share code across the codebase.
-def find_metadata(resource):
-    """
-    Retrieves and parses a remote metadata, given a gsconfig object (resource or layergroup).
-    :param resource: an object from the gsconfig python library (either a resource or a layergroup)
-    :return: a tuple (url, parsed metadata).
-    """
-    if resource.metadata_links is None:
-        raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
-    for mime_type, format, url in resource.metadata_links:
-        if mime_type == "text/xml" and format == "ISO19115:2003":
-            with urlopen(url) as fhandle:
-                return (url, MD_Metadata(etree.parse(fhandle)))
-    raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
 
 
 def guess_geonetwork_url(url):
