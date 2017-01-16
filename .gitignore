@@ -1,5 +1,6 @@
 *.pyc
 env/
+venv/
 docker/*.txt
 docker/*.zip
 docker/*.war

@@ -2,61 +2,7 @@
 
 This project aims to check the relevance between data (published into a GeoServer) and metadata (in GeoNetwork), and possibly fix the detected inconsistencies when possible (missing metadata, missing URL information, ...), following different scenarios.
 
-## Setup
-
-### Classic setup using a virtualenv
-
-To install the needed dependencies, follow these steps. Note that a python3 runtime is required to launch this tool.
-
-```
-# Make sure the needed dependencies are installed
-apt-get install virtualenv gcc python3-dev libproj-dev
-
-# clone the repository
-git clone https://github.com/georchestra/sdi-consistency-check.git
-cd sdi-consistency-check
-
-virtualenv -p python3 venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-### Using Docker
-
-#### Build the docker image
-
-```
-git clone https://github.com/sigrennesmetropole/sdi-consistence-check.git
-cd sdi-consistence-check && docker build -t georchestra/sdi-consistence-check .
-```
-
-#### Run with docker
-```
-docker run -ti georchestra/sdi-consistence-check python checker.py --mode CSW --server ...
-```
-
-See below for detailed options available in this tool.
-
-## Run
-
-### Password configuration
-
-If you need to check against protected services, you
-can create a configuration file in your home directory `~/.sdichecker` with following format :
-
-```
-<hostname> <username> <password>
-```
-
-Example :
-
-```
-sdi.georchestra.org testadmin testadmin
-```
-
-
-### Usage
+## Usage
 
 ```
 usage: checker.py [-h] [--mode {WMS,WFS,CSW}] [--inspire {flexible,strict}]
@@ -83,21 +29,82 @@ You need to choose one "mode" from :
  * CSW : check availability of WMS or WFS service for MD found in CSW service.
     For this mode, you can choose from flexible or strict inspire compliance.
 
-Examples :
+
+Example usage with a public WMS service:
+ * with docker:
+```
+docker run --rm -it georchestra/sdi-consistence-check --mode WMS --server https://www.geopicardie.fr/geoserver/wms
+```
+ * without docker (requires installation, see below):
+```
+python3 checker.py --mode WMS --server https://www.geopicardie.fr/geoserver/wms
+```
+
+
+In case a private service is to be checked, you should first create a `.sdichecker` in your home directory, with the following format:
+```
+<hostname> <username> <password>
+```
+Example :
+```
+sdi.georchestra.org testadmin testadmin
+```
+
+Example usage with a private service, requiring credentials.
+ * with docker:
+```
+docker run --rm -v $HOME/.sdichecker:/.sdichecker --user=`id -u $USER` -it georchestra/sdi-consistence-check --mode WMS --server https://www.geopicardie.fr/geoserver/wms
+```
+ * without docker (requires installation, see below):
+```
+python3 checker.py --mode WMS --server https://www.geopicardie.fr/geoserver/wms
+```
+
+### Advanced Usage
+
 
 Check consistency from a geoserver instance to a geonetwork using WMS :
 ```
 python3 checker.py --mode WMS --server https://sdi.georchestra.org/geoserver/wms
 ```
+
 Same using WFS service :
 ```
 python3 checker.py --mode WFS --server https://sdi.georchestra.org/geoserver/wfs
 ```
+
 Check CSW service :
 ```
 python3 checker.py --mode CSW --inspire=strict --geoserver-to-check sdi.georchestra.org --server https://sdi.georchestra.org/geonetwork/srv/fre/csw
 ```
 
+
+## Setup
+
+### Classic setup using a virtualenv
+
+To install the needed dependencies, follow these steps. Note that a python3 runtime is required to launch this tool.
+
+```
+# Make sure the needed dependencies are installed
+apt-get install virtualenv gcc python3-dev libproj-dev
+
+# clone the repository
+git clone https://github.com/georchestra/sdi-consistency-check.git
+cd sdi-consistency-check
+
+virtualenv -p python3 venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### Building the docker image
+
+```
+git clone https://github.com/sigrennesmetropole/sdi-consistence-check.git
+cd sdi-consistence-check && docker build -t georchestra/sdi-consistence-check .
+```
 
 ## About / Acknowledgements
 
