@@ -33,7 +33,7 @@ You need to choose one "mode" from :
 Example usage with a public WMS service:
  * with docker:
 ```
-docker run --rm -it georchestra/sdi-consistence-check --mode WMS --server https://www.geopicardie.fr/geoserver/wms
+docker run --rm georchestra/sdi-consistence-check --mode WMS --server https://www.geopicardie.fr/geoserver/wms
 ```
  * without docker (requires installation, see below):
 ```
@@ -53,7 +53,8 @@ sdi.georchestra.org testadmin testadmin
 Example usage with a private service, requiring credentials.
  * with docker:
 ```
-docker run --rm -v $HOME/.sdichecker:/.sdichecker --user=`id -u $USER` -it georchestra/sdi-consistence-check --mode WMS --server https://www.geopicardie.fr/geoserver/wms
+docker run --rm -v $HOME/.sdichecker:/.sdichecker --user=`id -u $USER` georchestra/sdi-consistence-check \
+ --mode WMS --server https://www.geopicardie.fr/geoserver/wms
 ```
  * without docker (requires installation, see below):
 ```
@@ -75,7 +76,8 @@ python3 checker.py --mode WFS --server https://sdi.georchestra.org/geoserver/wfs
 
 Check CSW service :
 ```
-python3 checker.py --mode CSW --inspire=strict --geoserver-to-check sdi.georchestra.org --server https://sdi.georchestra.org/geonetwork/srv/fre/csw
+python3 checker.py --mode CSW --inspire=strict --geoserver-to-check sdi.georchestra.org \
+  --server https://sdi.georchestra.org/geonetwork/srv/fre/csw
 ```
 
 
