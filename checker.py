@@ -43,8 +43,8 @@ def print_banner(args):
 def print_ows_report(owschecker):
         total_layers = sum(len(v) for k, v in owschecker.get_service().layersByWorkspace.items())
         inconsistencies_found = len(owschecker.get_inconsistencies())
-        layers_inconst_percent = floor((total_layers * 100 / inconsistencies_found)) if \
-            inconsistencies_found > 0 else 0
+        layers_inconst_percent = floor((inconsistencies_found * 100 / total_layers)) if \
+            total_layers > 0 else 0
         logger.info("\n\n%d layers parsed, %d inconsistencies found (%d %%)", total_layers,
                     inconsistencies_found, layers_inconst_percent)
         logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
