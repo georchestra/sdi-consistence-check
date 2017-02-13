@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import warnings
 import os
 import sys
 from math import floor
@@ -76,6 +77,8 @@ if __name__ == "__main__":
 
     if args.disable_ssl_verification:
         bypassSSLVerification()
+    # Disable FutureWarning from owslib
+    warnings.simplefilter("ignore", category=FutureWarning)
 
     print_banner(args)
 
