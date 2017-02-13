@@ -72,6 +72,9 @@ if __name__ == "__main__":
                                                      "Ex: sdi.georchestra.org", nargs="+")
     parser.add_argument("--disable-ssl-verification", help="Disable certificate verification", action="store_true")
 
+    parser.add_argument("--only-err", help="Only display errors, no summary informations will be displayed",
+                        action="store_true")
+
     args = parser.parse_args(sys.argv[1:])
     creds = Credentials(logger=logger)
 
@@ -80,7 +83,8 @@ if __name__ == "__main__":
     # Disable FutureWarning from owslib
     warnings.simplefilter("ignore", category=FutureWarning)
 
-    print_banner(args)
+    if not args.only_err:
+        print_banner(args)
 
     if (args.mode == "WMS" or args.mode == "WFS") and args.server is not None:
         logger.debug("Querying %s ..." % args.server)
@@ -89,7 +93,8 @@ if __name__ == "__main__":
             ows_checker = OwsChecker(args.server, wms=(True if args.mode == "WMS" else False), creds=creds)
             logger.debug("Finished integrity check against %s GetCapabilities", args.mode)
             print_layers_error(ows_checker.get_inconsistencies())
-            print_ows_report(ows_checker)
+            if not args.only_err:
+                print_ows_report(ows_checker)
         except BaseException as e:
             logger.info("Unable to parse the remote OWS server: %s", str(e))
 
