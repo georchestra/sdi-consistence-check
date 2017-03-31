@@ -54,8 +54,8 @@ def print_ows_report(owschecker):
 def print_csw_report(errors, total_mds):
     unique_mds_in_error = { error.md_uuid for error in errors }
     err_percent = floor(len(unique_mds_in_error) * 100 / total_mds) if total_mds > 0 else 0
-    logger.info("\n\n%d metadata parsed, %d inconsistencies found (%d %%)",
-                total_mds, len(errors), err_percent)
+    logger.info("\n\n%d metadata parsed, %d inconsistencies found, %d unique metadatas in error (%d %%)",
+                total_mds, len(errors), len(unique_mds_in_error), err_percent)
     logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
 
@@ -154,14 +154,14 @@ if __name__ == "__main__":
                     for uri in csw_q.get_md(uuid).uris:
                         try:
                             if uri["protocol"] == "OGC:WMS":
-                                wms_found = True
                                 # TODO: use the geoserver_to_check option ?
                                 geoserver_services.checkWmsLayer(uri["url"], uri["name"])
+                                wms_found = True
                                 logger.debug("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                             elif uri["protocol"] == "OGC:WFS":
-                                wfs_found = True
                                 # TODO: same remark
                                 geoserver_services.checkWfsLayer(uri["url"], uri["name"])
+                                wfs_found = True
                                 logger.debug("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                             else:
                                 logger.debug("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
@@ -174,12 +174,12 @@ if __name__ == "__main__":
                     str_wms_found = "    checking WMS url: "
                     str_wfs_found = "    checking WFS url: "
                     if wms_found == False:
-                        str_wms_found += "error: no OGC:WMS url defined"
+                        str_wms_found += "KO: no OGC:WMS url defined, or layer not found on the WMS server"
                         errors.append(GnToGsNoOGCWmsDefined(uuid))
                     else:
                         str_wms_found += "OK"
                     if wfs_found == False:
-                        str_wfs_found += "error: no OGC:WFS url defined"
+                        str_wfs_found += "KO: no OGC:WFS url defined, or layer not found on the WFS server"
                         errors.append(GnToGsNoOGCWfsDefined(uuid))
                     else:
                         str_wfs_found += "OK"
