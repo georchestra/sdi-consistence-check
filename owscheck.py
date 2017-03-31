@@ -96,28 +96,36 @@ class OwsChecker:
 
     def __init__(self, serviceUrl, wms=True, creds = Credentials()):
         self._inconsistencies = []
-
+        self._layer_names = []
         try:
             self._service = OwsServer(serviceUrl, wms, creds)
         except BaseException as e:
             raise UnparseableGetCapabilitiesInconsistency(serviceUrl, str(e))
 
+        layer_idx = 0
         for workspace, layers in self._service.layersByWorkspace.items():
             for layer in layers:
                 fqLayerName = "%s:%s" % (workspace, layer)
                 mdUrls = self._service.getMetadatas(fqLayerName)
                 if len(mdUrls) == 0:
-                    self._inconsistencies.append(GsMetadataMissingInconsistency(fqLayerName))
+                    self._inconsistencies.append(GsMetadataMissingInconsistency(fqLayerName, layer_idx))
                     continue
                 for (mdFormat, mdUrl) in mdUrls:
                     try:
                         GeoMetadata(mdUrl, mdFormat, creds=creds)
                     except GsToGnMetadataInvalidInconsistency as e:
-                        e.layerName = fqLayerName
+                        e.layer_name = fqLayerName
+                        e.layer_index = layer_idx
                         self._inconsistencies.append(e)
+                self._layer_names.append(fqLayerName)
+                layer_idx += 1
+
 
     def get_inconsistencies(self):
         return self._inconsistencies
 
     def get_service(self):
         return self._service
+
+    def get_layer_names(self):
+        return self._layer_names

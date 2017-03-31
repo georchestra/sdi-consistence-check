@@ -2,7 +2,6 @@
 import argparse
 import logging
 import warnings
-import os
 import sys
 from math import floor
 from time import strftime, localtime
@@ -23,11 +22,6 @@ logger.addHandler(out_hdlr)
 logger.setLevel(logging.INFO)
 
 
-def print_layers_error(errors):
-    for idx, error in enumerate(errors):
-        logger.error("#%d\n  Layer: %s", idx, error.layer_name)
-        logger.error("  Error: %s\n" % str(error))
-
 def print_banner(args):
     logger.info("\nSDI check\n\n")
     logger.info("mode: %s\n", args.mode)
@@ -41,9 +35,27 @@ def print_banner(args):
     logger.info("\n\n")
 
 
+def print_layers_status(owschecker):
+    errors = owschecker.get_inconsistencies()
+    layers = owschecker.get_layer_names()
+    layers_in_error = [ error.layer_index for error in errors ]
+    curr_idx = 0
+    for idx, error in enumerate(errors):
+        while curr_idx < error.layer_index:
+            if curr_idx not in layers_in_error:
+                logger.info("#%d\n  Layer: %s OK\n", curr_idx, layers[curr_idx])
+            curr_idx += 1
+        logger.error("#%d\n  Layer: %s", error.layer_index, error.layer_name)
+        logger.error("  Error: %s\n" % str(error))
+
+
 def print_ows_report(owschecker):
-        total_layers = sum(len(v) for k, v in owschecker.get_service().layersByWorkspace.items())
-        inconsistencies_found = len(owschecker.get_inconsistencies())
+        total_layers = len(owschecker.get_layer_names())
+        inconsistencies = owschecker.get_inconsistencies()
+        layers_error = set()
+        for inconst in inconsistencies:
+            layers_error.add(inconst.layer_index)
+        inconsistencies_found = len(layers_error)
         layers_inconst_percent = floor((inconsistencies_found * 100 / total_layers)) if \
             total_layers > 0 else 0
         logger.info("\n\n%d layers parsed, %d inconsistencies found (%d %%)", total_layers,
@@ -92,7 +104,7 @@ if __name__ == "__main__":
         try:
             ows_checker = OwsChecker(args.server, wms=(True if args.mode == "WMS" else False), creds=creds)
             logger.debug("Finished integrity check against %s GetCapabilities", args.mode)
-            print_layers_error(ows_checker.get_inconsistencies())
+            print_layers_status(ows_checker)
             if not args.only_err:
                 print_ows_report(ows_checker)
         except BaseException as e:
