@@ -159,6 +159,8 @@ if __name__ == "__main__":
             global_idx = 0
             while True:
                 res = csw_q.get_dataset_records()
+                if (len(res)) == 0:
+                    break
                 total_mds += len(res)
                 for idx, uuid in enumerate(res):
                     current_md = res[uuid]
@@ -206,8 +208,5 @@ if __name__ == "__main__":
                     logger.info("")
                     # end of current md
                     global_idx += 1
-                # no more results, we should stop
-                if csw_q.csw.results['nextrecord'] == 0:
-                    break
 
         print_csw_report(errors, total_mds)
