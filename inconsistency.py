@@ -34,6 +34,41 @@ class GnToGsLayerNotFoundInconsistency(Inconsistency):
         return "Metadata %s references a layer : %s on %s that does not exist (%s)" \
                % (self.md_uuid, self.layer_name, self.layer_url, self.msg)
 
+class GnToGsOtherError(Inconsistency):
+    """
+    Class for errors in underlying libraries (owslib), not directly
+    managed by this project
+    """
+    def __init__(self, layer_url, layer_name, exc):
+        self.layer_url = layer_url
+        self.layer_name = layer_name
+        self.exc = exc
+
+    def set_md_uuid(self, uuid):
+        self.md_uuid = uuid
+
+    def __str__(self):
+        return "%s: %s" % (self.exc.__class__.__name__, str(self.exc))
+
+
+class GnToGsInvalidCapabilitiesUrl(Inconsistency):
+    """
+    Class for inconsistency when a metadata contains URL to a layer which is not valid
+    """
+    def __init__(self, layer_url, layer_name, is_wms, md_uuid=None, msg=None):
+        self.layer_url = layer_url
+        self.layer_name = layer_name
+        self.md_uuid = md_uuid
+        self.msg = msg
+        self.is_wms = is_wms
+
+    def set_md_uuid(self, uuid):
+        self.md_uuid = uuid
+
+    def __str__(self):
+        return "Metadata %s references a layer : %s on %s which is not a valid %s GetCapabilities URL" \
+               % (self.md_uuid, self.layer_name, self.layer_url,
+                  "WMS" if self.is_wms else "WFS")
 
 class GnToGsNoOGCWmsDefined(Inconsistency):
     """

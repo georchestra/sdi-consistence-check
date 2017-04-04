@@ -10,7 +10,8 @@ from owslib.util import ServiceException
 
 from credentials import Credentials
 from cswquerier import CachedOwsServices, CSWQuerier
-from inconsistency import Inconsistency, GnToGsLayerNotFoundInconsistency, GnToGsNoOGCWmsDefined, GnToGsNoOGCWfsDefined
+from inconsistency import Inconsistency, GnToGsLayerNotFoundInconsistency, GnToGsNoOGCWmsDefined, GnToGsNoOGCWfsDefined, \
+    GnToGsOtherError
 from owscheck import OwsChecker
 from bypassSSLVerification import bypassSSLVerification
 
@@ -112,7 +113,7 @@ if __name__ == "__main__":
 
     elif args.mode == "CSW" and args.server is not None:
         total_mds = 0
-        geoserver_services = CachedOwsServices(creds)
+        geoserver_services = CachedOwsServices(creds, disable_ssl=args.disable_ssl_verification)
         try:
             csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services,
                                logger=logger)
@@ -155,49 +156,56 @@ if __name__ == "__main__":
                         errors.append(e)
 
         elif args.inspire == "flexible":
+            global_idx = 0
             while True:
                 res = csw_q.get_dataset_records()
                 total_mds += len(res)
                 for idx, uuid in enumerate(res):
                     current_md = res[uuid]
-                    logger.info("#%d\n  UUID : %s\n  %s", idx, uuid, current_md.title)
+                    logger.info("#%d\n  UUID : %s\n  %s", global_idx, uuid, current_md.title)
                     wms_found = False
                     wfs_found = False
                     for uri in csw_q.get_md(uuid).uris:
+                        from_wms = False
                         try:
                             if uri["protocol"] == "OGC:WMS":
+                                wms_found = True
+                                from_wms = True
                                 # TODO: use the geoserver_to_check option ?
                                 geoserver_services.checkWmsLayer(uri["url"], uri["name"])
-                                wms_found = True
+
                                 logger.debug("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
+                                logger.info("    WMS url: OK")
                             elif uri["protocol"] == "OGC:WFS":
+                                wfs_found = True
                                 # TODO: same remark
                                 geoserver_services.checkWfsLayer(uri["url"], uri["name"])
-                                wfs_found = True
                                 logger.debug("\tURI OK : %s %s %s", uri["protocol"], uri['url'], uri['name'])
+                                logger.info("    WFS url: OK")
                             else:
                                 logger.debug("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
-                        except GnToGsLayerNotFoundInconsistency as ex:
-                            ex.set_md_uuid(uuid)
-                            errors.append(ex)
+                        except BaseException as ex:
+                            if ex is GnToGsLayerNotFoundInconsistency or ex is GnToGsOtherError:
+                                ex.set_md_uuid(uuid)
+                                errors.append(ex)
+                            else:
+                                # morph encountered error in to an "other error"
+                                exc = GnToGsOtherError(uri['url'], uri['name'], ex)
+                                exc.set_md_uuid(uuid)
+                                errors.append(exc)
                             logger.debug("\t /!\\ ---> Cannot find Layer ON GS : %s %s %s %s %s",
                                         uuid, uri['protocol'], uri['url'], uri['name'], ex)
-
-                    str_wms_found = "    checking WMS url: "
-                    str_wfs_found = "    checking WFS url: "
-                    if wms_found == False:
-                        str_wms_found += "KO: no OGC:WMS url defined, or layer not found on the WMS server"
+                            logger.info("    %s url: KO: %s: %s" % ("WMS" if from_wms else "WFS",
+                                                                    uri['url'], str(errors[-1])))
+                    if not wms_found:
+                        logger.info("    WMS url: KO: No wms url found in the metadata")
                         errors.append(GnToGsNoOGCWmsDefined(uuid))
-                    else:
-                        str_wms_found += "OK"
-                    if wfs_found == False:
-                        str_wfs_found += "KO: no OGC:WFS url defined, or layer not found on the WFS server"
+                    if not wfs_found:
+                        logger.info("    WFS url: KO: No wfs url found in the metadata")
                         errors.append(GnToGsNoOGCWfsDefined(uuid))
-                    else:
-                        str_wfs_found += "OK"
-                    logger.info(str_wms_found)
-                    logger.info(str_wfs_found)
                     logger.info("")
+                    # end of current md
+                    global_idx += 1
                 # no more results, we should stop
                 if csw_q.csw.results['nextrecord'] == 0:
                     break

@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 from owslib.csw import CatalogueServiceWeb, namespaces
 from owslib.fes import PropertyIsEqualTo, Not, Or, And
+from owslib.util import ServiceException
 
 from credentials import Credentials
 from inconsistency import Inconsistency, GnToGsNoGetCapabilitiesUrl
@@ -32,7 +33,10 @@ class CSWQuerier:
             self.owsServices = CachedOwsServices(credentials=credentials)
         else:
             self.owsServices = cached_ows_services
-        self.csw = CatalogueServiceWeb(url, username=username, password=password)
+        try:
+            self.csw = CatalogueServiceWeb(url, username=username, password=password)
+        except BaseException as ex:
+            raise ServiceException(ex)
         self.mds_not_parsable = []
         self.reset()
 

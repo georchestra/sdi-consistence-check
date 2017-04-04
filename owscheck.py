@@ -1,6 +1,9 @@
+import base64
 import logging
+import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
 
+import requests
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
 
@@ -63,9 +66,10 @@ class OwsServer:
 
 class CachedOwsServices:
 
-    def __init__(self, credentials = Credentials()):
+    def __init__(self, credentials = Credentials(), disable_ssl=False):
         self._servers = { "wms" : {} , "wfs" : {} }
         self._credentials = credentials
+        self._disable_ssl = disable_ssl
 
     def checkWfsLayer(self, url, name):
         self._checkLayer(url, name, is_wms=False)
@@ -73,15 +77,30 @@ class CachedOwsServices:
     def checkWmsLayer(self, url, name):
         self._checkLayer(url, name, is_wms=True)
 
+    def _check_legit_getcapabilities_url(self, url, name, is_wms):
+        auth = None
+        if self._credentials is not None:
+            (username, password) = self._credentials.getFromUrl(url)
+            if username is not None and password is not None:
+                auth = (username,password)
+        resp = requests.get(url, auth=auth, verify=not self._disable_ssl)
+        str_url = resp.text
+        first_tag = ET.fromstring(str_url).tag.lower()
+        if (first_tag.endswith("wms_capabilities" if is_wms else "wfs_capabilities")):
+            pass
+        else:
+            raise GnToGsInvalidCapabilitiesUrl(layer_name=name, layer_url=url, is_wms=is_wms)
+
     def _checkLayer(self, url, name, is_wms):
         servers_cache = self._servers["wms" if is_wms else "wfs"]
         if url not in servers_cache.keys():
-            try:
+           self._check_legit_getcapabilities_url(url, name, is_wms)
+           try:
                 servers_cache[url] = OwsServer(url, is_wms, creds=self._credentials)
-            except BaseException as ex:
-                raise GnToGsLayerNotFoundInconsistency(layer_name=name,
-                                                       layer_url=url,
-                                                       msg="%s: %s" % (ex.__class__.__name__, str(ex)))
+           except BaseException as ex:
+                raise GnToGsOtherError(layer_name=name,
+                                       layer_url=url,
+                                       exc=ex)
         try:
             servers_cache[url].getLayer(name)
         except KeyError:
