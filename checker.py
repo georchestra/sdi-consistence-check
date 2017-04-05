@@ -187,7 +187,8 @@ if __name__ == "__main__":
                             else:
                                 logger.debug("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                         except BaseException as ex:
-                            if ex is GnToGsLayerNotFoundInconsistency or ex is GnToGsOtherError:
+                            if isinstance(ex, GnToGsLayerNotFoundInconsistency) or\
+                                            isinstance(ex,GnToGsOtherError):
                                 ex.set_md_uuid(uuid)
                                 errors.append(ex)
                             else:
@@ -208,5 +209,6 @@ if __name__ == "__main__":
                     logger.info("")
                     # end of current md
                     global_idx += 1
-
+                if csw_q.csw.results['nextrecord'] == 0:
+                    break
         print_csw_report(errors, total_mds)
