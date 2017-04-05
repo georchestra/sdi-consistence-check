@@ -65,8 +65,13 @@ class OwsServer:
         return set([(i['format'], i['url']) for i in l.metadataUrls])
 
     def getLayer(self, name):
-        return self._ows[name]
-
+        try:
+            return self._ows[name]
+        # Not found ? try without workspace
+        except KeyError:
+            if ":" in name:
+                (_, layername) = name.split(":")
+                return self._ows[layername]
 
 class CachedOwsServices:
 
@@ -107,7 +112,7 @@ class CachedOwsServices:
                                        exc=ex)
         try:
             servers_cache[url].getLayer(name)
-        except KeyError:
+        except KeyError as ex:
             raise GnToGsLayerNotFoundInconsistency(layer_name=name, layer_url=url, msg="Layer not found on GS")
 
 
