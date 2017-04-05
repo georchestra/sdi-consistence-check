@@ -11,7 +11,7 @@ from owslib.util import ServiceException
 from credentials import Credentials
 from cswquerier import CachedOwsServices, CSWQuerier
 from inconsistency import Inconsistency, GnToGsLayerNotFoundInconsistency, GnToGsNoOGCWmsDefined, GnToGsNoOGCWfsDefined, \
-    GnToGsOtherError
+    GnToGsOtherError, GnToGsInvalidCapabilitiesUrl
 from owscheck import OwsChecker
 from bypassSSLVerification import bypassSSLVerification
 
@@ -187,7 +187,8 @@ if __name__ == "__main__":
                             else:
                                 logger.debug("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
                         except BaseException as ex:
-                            if isinstance(ex, GnToGsLayerNotFoundInconsistency) or\
+                            if isinstance(ex, GnToGsLayerNotFoundInconsistency) or \
+                                isinstance(ex, GnToGsInvalidCapabilitiesUrl) or    \
                                             isinstance(ex,GnToGsOtherError):
                                 ex.set_md_uuid(uuid)
                                 errors.append(ex)
