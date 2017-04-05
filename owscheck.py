@@ -1,4 +1,3 @@
-import base64
 import logging
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
@@ -137,9 +136,11 @@ class OwsChecker:
                     fqLayerName = "%s:%s" % (workspace, layer)
                 else:
                     fqLayerName = layer
+                self._layer_names.append(fqLayerName)
                 mdUrls = self._service.getMetadatas(fqLayerName)
                 if len(mdUrls) == 0:
                     self._inconsistencies.append(GsMetadataMissingInconsistency(fqLayerName, layer_idx))
+                    layer_idx += 1
                     continue
                 for (mdFormat, mdUrl) in mdUrls:
                     try:
@@ -148,9 +149,7 @@ class OwsChecker:
                         e.layer_name = fqLayerName
                         e.layer_index = layer_idx
                         self._inconsistencies.append(e)
-                self._layer_names.append(fqLayerName)
                 layer_idx += 1
-
 
     def get_inconsistencies(self):
         return self._inconsistencies
