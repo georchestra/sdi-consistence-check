@@ -48,6 +48,10 @@ class OwsServer:
                 except KeyError:
                     self.layersByWorkspace[workspace] = [layer]
             except ValueError:
+                try:
+                    self.layersByWorkspace[None].append(content)
+                except KeyError:
+                    self.layersByWorkspace[None] = [content]
                 pass
 
     def getMetadatas(self, layerName):
@@ -124,7 +128,10 @@ class OwsChecker:
         layer_idx = 0
         for workspace, layers in self._service.layersByWorkspace.items():
             for layer in layers:
-                fqLayerName = "%s:%s" % (workspace, layer)
+                if workspace is not None:
+                    fqLayerName = "%s:%s" % (workspace, layer)
+                else:
+                    fqLayerName = layer
                 mdUrls = self._service.getMetadatas(fqLayerName)
                 if len(mdUrls) == 0:
                     self._inconsistencies.append(GsMetadataMissingInconsistency(fqLayerName, layer_idx))
