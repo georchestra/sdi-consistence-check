@@ -26,7 +26,7 @@ logger.setLevel(logging.INFO)
 def print_banner(args):
     logger.info("\nSDI check\n\n")
     logger.info("mode: %s\n", args.mode)
-    if (args.mode == "CSW"):
+    if args.mode == "CSW":
         logger.info("metadata catalog CSW URL: %s", args.server)
         logger.info("INSPIRE mode: %s", args.inspire)
     else:
@@ -51,17 +51,17 @@ def print_layers_status(owschecker):
 
 
 def print_ows_report(owschecker):
-        total_layers = len(owschecker.get_layer_names())
-        inconsistencies = owschecker.get_inconsistencies()
-        layers_error = set()
-        for inconst in inconsistencies:
-            layers_error.add(inconst.layer_index)
-        inconsistencies_found = len(layers_error)
-        layers_inconst_percent = floor((inconsistencies_found * 100 / total_layers)) if \
-            total_layers > 0 else 0
-        logger.info("\n\n%d layers parsed, %d inconsistencies found (%d %%)", total_layers,
-                    inconsistencies_found, layers_inconst_percent)
-        logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
+    total_layers = len(owschecker.get_layer_names())
+    inconsistencies = owschecker.get_inconsistencies()
+    layers_error = set()
+    for inconst in inconsistencies:
+        layers_error.add(inconst.layer_index)
+    inconsistencies_found = len(layers_error)
+    layers_inconst_percent = floor((inconsistencies_found * 100 / total_layers)) if \
+        total_layers > 0 else 0
+    logger.info("\n\n%d layers parsed, %d inconsistencies found (%d %%)", total_layers,
+                inconsistencies_found, layers_inconst_percent)
+    logger.info("end time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
 
 def print_csw_report(errors, total_mds):
