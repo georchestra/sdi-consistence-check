@@ -121,7 +121,7 @@ class OwsChecker:
     """
     logger = logging.getLogger("owschecker")
 
-    def __init__(self, serviceUrl, wms=True, creds = Credentials()):
+    def __init__(self, serviceUrl, wms=True, creds=Credentials()):
         self._inconsistencies = []
         self._layer_names = []
         try:
