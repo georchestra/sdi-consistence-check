@@ -50,15 +50,14 @@ def update_resource(layer, resource, title, abstract, md_url_html, attribution, 
     upd_title = False
     upd_abstract = False
     upd_attribution = False
-    if resource.title is None or len(resource.title) < len(title):
+    if resource.title is None:
         resource.title = title
         upd_title = True
     # Same algo for the abstract
-    if resource.abstract is None or len(resource.abstract) < len(abstract):
+    if resource.abstract is None:
         resource.abstract = abstract
         upd_abstract = True
-    if layer.attribution is None or layer.attribution['title'] is None \
-            or len(layer.attribution["title"]) < len(attribution):
+    if layer.attribution is None or layer.attribution['title'] is None:
         upd_attribution = True
         if layer.attribution is None:
             layer.attribution = {"title": attribution}
