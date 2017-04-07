@@ -3,10 +3,11 @@ import logging
 import re
 import sys
 import warnings
+import xml
 from time import strftime, localtime
-
 from geoserver.catalog import Catalog
-
+from owslib import iso
+from owslib import util
 
 from credentials import Credentials
 from bypassSSLVerification import bypassSSLVerification
@@ -46,7 +47,7 @@ def update_resource(layer, resource, title, abstract, md_url_html, attribution, 
     :param dry_run: true does not modify anything, false for actually saving the resource
     :return:
     """
-    # Updates the MD title (if not present or if the MD title is bigger)
+    # Updates the MD title
     upd_title = False
     upd_abstract = False
     upd_attribution = False
@@ -57,14 +58,14 @@ def update_resource(layer, resource, title, abstract, md_url_html, attribution, 
     if resource.abstract != abstract:
         resource.abstract = abstract
         upd_abstract = True
-    if layer.attribution is None or layer.attribution['title'] is None:
+    if layer.attribution is None and attribution is not None:
         upd_attribution = True
-        if layer.attribution is None:
-            layer.attribution = {"title": attribution}
-        else:
-            attribs = layer.attribution
-            attribs["title"] = attribution
-            layer.attribution = attribs
+        layer.attribution = {"title": attribution}
+    elif layer.attribution['title'] != attribution and attribution is not None:
+        upd_attribution = True
+        attribs = layer.attribution
+        attribs["title"] = attribution
+        layer.attribution = attribs
     # Check that MD Urls are present
     has_md_html = False
     # Note: res.metadata_links cannot be None, because we used it to get the MDD
@@ -112,13 +113,22 @@ def guess_catalogue_endpoint(url, md_identifier):
     return "%s?uuid=%s" % (m.group(1), md_identifier)
 
 
-def extract_attribution(str):
-    try:
-        m = re.search('"(.*)"', str)
-        return m.group(1)
-    except:
-        logger.error("unable to extract the attribution, using the whole otherConstraint field")
-        return str
+def extract_attribution(md):
+    # We parse the raw XML metadata once again because OWSLib won't let us access
+    # to the required fields in the parsed metadata object
+    xmlmd = xml.etree.ElementTree.fromstring(md.xml)
+    for i in xmlmd.findall(
+            util.nspath_eval(
+                'gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:useLimitation/gco:CharacterString',
+                iso.namespaces)):
+        val = util.testXMLValue(i)
+        if val is not None:
+            try:
+                m = re.search('"(.*)"', val)
+                return m.group(1)
+            except:
+                logger.debug("Unable to extract attribution from \"%s\" ", val)
+    return ""
 
 
 def gn_to_gs_fix(layer, resource, dry_run, credentials, no_ssl_check=False):
@@ -126,8 +136,11 @@ def gn_to_gs_fix(layer, resource, dry_run, credentials, no_ssl_check=False):
     md_title = md.identificationinfo[0].title if len(md.identificationinfo) > 0 else ""
     md_abstract = md.identificationinfo[0].abstract if len(md.identificationinfo) > 0 else ""
     md_url_html = guess_catalogue_endpoint(url, md.identifier)
-    md_attribution = extract_attribution(md.identification.otherconstraints[0]) \
-        if (len(md.identification.otherconstraints)) > 0 else ""
+    md_attribution = None
+    try:
+        md_attribution = extract_attribution(md)
+    except BaseException as e:
+        logger.debug("Unable to parse the metadata attribution: %s", str(e), exc_info=1)
     update_resource(layer, resource, md_title, md_abstract, md_url_html, md_attribution, dry_run)
 
 
