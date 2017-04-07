@@ -121,8 +121,8 @@ def extract_attribution(str):
         return str
 
 
-def gn_to_gs_fix(layer, resource, dry_run, credentials):
-    url, md = find_data_metadata(resource, credentials)
+def gn_to_gs_fix(layer, resource, dry_run, credentials, no_ssl_check=False):
+    url, md = find_data_metadata(resource, credentials, no_ssl_check)
     md_title = md.identificationinfo[0].title if len(md.identificationinfo) > 0 else ""
     md_abstract = md.identificationinfo[0].abstract if len(md.identificationinfo) > 0 else ""
     md_url_html = guess_catalogue_endpoint(url, md.identifier)
@@ -188,7 +188,7 @@ if __name__ == "__main__":
                 try:
                     layer = gscatalog.get_layer(res.workspace.name + ":" + res.name)
                     logger.debug("Inspecting layer : %s:%s" % (res.workspace.name, res.name))
-                    gn_to_gs_fix(layer, res, args.dry_run, creds)
+                    gn_to_gs_fix(layer, res, args.dry_run, creds, args.disable_ssl_verification)
                 except Inconsistency as e:
                     logger.debug("Inconsistency found : %s" % e)
                     errors.append(e)
@@ -253,7 +253,7 @@ if __name__ == "__main__":
             logger.debug("Resource \"%s\" found, processing ..." % resource_found.name)
             try:
                 layer = gscatalog.get_layer(resource_found.workspace.name + ":" + resource_found.name)
-                gn_to_gs_fix(layer, resource_found, args.dry_run, creds)
+                gn_to_gs_fix(layer, resource_found, args.dry_run, creds, args.disable_ssl_verification)
             except Inconsistency as e:
                 errors.append(e)
     print_report(errors)

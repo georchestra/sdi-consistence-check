@@ -1,3 +1,4 @@
+import ssl
 from urllib.request import urlopen, Request
 import base64
 from owslib.iso import MD_Metadata
@@ -6,7 +7,7 @@ from owslib.etree import etree
 from inconsistency import GsMetadataMissingInconsistency, GsToGnMetadataInvalidInconsistency
 
 
-def find_data_metadata(resource, credentials):
+def find_data_metadata(resource, credentials, no_ssl_check=False):
     """
     Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
     :param resource: an object from the gsconfig python library (either a resource or a layergroup)
@@ -18,9 +19,11 @@ def find_data_metadata(resource, credentials):
     for mime_type, md_format, url in resource.metadata_links:
         if mime_type == "text/xml" and md_format == "ISO19115:2003":
             # disable certificate verification
-            # ctx = ssl.create_default_context()
-            # ctx.check_hostname = False
-            # ctx.verify_mode = ssl.CERT_NONE
+            ctx = None
+            if no_ssl_check:
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
             req = Request(url)
             username, password = credentials.getFromUrl(url)
             if username is not None:
@@ -28,7 +31,7 @@ def find_data_metadata(resource, credentials):
                 authheader =  "Basic %s" % base64string.decode()
                 req.add_header("Authorization", authheader)
             try:
-                with urlopen(req) as fhandle:
+                with urlopen(req, context=ctx) as fhandle:
                     return (url, MD_Metadata(etree.parse(fhandle)))
             except Exception as e:
                 raise GsToGnMetadataInvalidInconsistency(url, str(e),
