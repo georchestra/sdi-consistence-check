@@ -127,7 +127,7 @@ class GsMetadataMissingInconsistency(Inconsistency):
     with no metadata URL.
     Note: this class is used in both scenarii (2 and 3), hence the name.
     """
-    def __init__(self, layer_name, layer_idx):
+    def __init__(self, layer_name, layer_idx=None):
         self.layer_name = layer_name
         self.layer_index = layer_idx
 
