@@ -144,8 +144,11 @@ def print_banner(args):
 
 def print_report(errors):
     logger.info("\nProcessing ended, here is a summary of the collected errors:")
-    for err in errors:
-        logger.info("* %s", err)
+    if len(errors) == 0:
+        logger.info("No error")
+    else:
+        for err in errors:
+            logger.info("* %s", err)
     logger.info("\nend time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
 if __name__ == "__main__":
