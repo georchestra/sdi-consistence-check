@@ -8,3 +8,5 @@ gsconfig-py3
 
 mako==1.0.6
 
+# For unit tests
+nose

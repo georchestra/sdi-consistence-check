@@ -108,6 +108,14 @@ git clone https://github.com/sigrennesmetropole/sdi-consistence-check.git
 cd sdi-consistence-check && docker build -t georchestra/sdi-consistence-check .
 ```
 
+## Testing
+
+Nose is used for unit testing ; to launch the testsuite, just use the following command:
+
+```
+nosetests
+```
+
 ## About / Acknowledgements
 
 Work sponsored by [Service de l'Information Géographique de Rennes Métropole](https://github.com/sigrennesmetropole/)
