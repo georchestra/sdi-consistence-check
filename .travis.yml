@@ -15,6 +15,8 @@ env:
     - secure: "B+jiBLP39sHHZ+3M4yifHCjMdlEtw10uFNMhJwbkFAxGcRRNMteNWpsPlX3GRFijLcdcRw1ljBF+HsCdGHHJL3XoYzBnJ8h3jk+hRs0XYCs/bPqhCWijzp7PJJB2HyDFvleUyiJOKUmtKk8DmpnnPGQbB9wHB7WJI3URga4EOpaZu863l1ZK5UEy1xZRVAVPzw0IgDGyqQShRLilVif4bI4dwtNMWOGVb1JHx52t2Q0BnU/L8AEl0M6VGDUyDoWPQ4P0eyjJhGuhMQKjiRkBx6at8YfBiXcnmGs/q7lVvjZIiFunDwpaQkxObbexRT4il3w0TTqukQ8kWUDtmcE51VyYPIwIO/lyheko34JWzh4Nq2ITpp4u/Cx6UZH9wudFIcFBx7JIqaMvcZ52Sa9RCTEpKr1UBzeKVawSX5oYRKeeqg+D/F3kk6h49ZG3bQ2ahvgcvSlQgJAaM8avxu4gEXLUHjJBF2SdvP0RD8AXr9pqSrtufs5MaHPhEBdO5DgfPu7frq5FeUA9Skk19a3bscqzUhl1C6r8CtvxuYlXiJ7Mr4cNp8A+hjT4uUz3ANxema12FaSfL1nBCHh8LoQqTPS1aVhrYyqK1xGTxbXRhJZjQ5qj9q0Owp7+q58dzLvYPiuCpavIu8UJodHaZjvJ0H/lP0jSiq5xT5K6ItARHNQ=" # DOCKER_PASS
     - COMMIT=${TRAVIS_COMMIT::8}
 
+script: true
+
 after_success:
   - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
   - export REPO=georchestra/sdi-consistence-check
