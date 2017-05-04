@@ -1,4 +1,5 @@
 import ssl
+from time import strftime, localtime
 from urllib.request import urlopen, Request
 import base64
 from owslib.iso import MD_Metadata
@@ -38,3 +39,13 @@ def find_data_metadata(resource, credentials, no_ssl_check=False):
                                                          layer_name="%s:%s" % (resource.workspace.name, resource.name))
 
     raise GsMetadataMissingInconsistency(resource.workspace.name + ":" + resource.name)
+
+
+def print_report(logger, errors):
+    logger.info("\nProcessing ended, here is a summary of the collected errors:")
+    if len(errors) == 0:
+        logger.info("No error")
+    else:
+        for err in errors:
+            logger.info("* %s", err)
+    logger.info("\nend time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))

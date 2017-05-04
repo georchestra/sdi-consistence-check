@@ -5,14 +5,16 @@ import sys
 import warnings
 import xml
 from time import strftime, localtime
+
 from geoserver.catalog import Catalog
 from owslib import iso
 from owslib import util
 
-from credentials import Credentials
 from bypassSSLVerification import bypassSSLVerification
+from credentials import Credentials
 from inconsistency import Inconsistency
-from utils import find_data_metadata
+from utils import find_data_metadata, print_report
+
 
 # Scénario 2 Read-Write GN -> GS
 #
@@ -98,8 +100,6 @@ def update_resource(layer, resource, title, abstract, md_url_html, attribution, 
         logger.info("\n")
 
 
-
-
 def guess_catalogue_endpoint(url, md_identifier):
     """
     Given a URL, try to guess the catalogue endpoint. This method is used to guess the HTML URL for the metadata.
@@ -154,15 +154,6 @@ def print_banner(args):
     logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
     logger.info("\n\n")
 
-
-def print_report(errors):
-    logger.info("\nProcessing ended, here is a summary of the collected errors:")
-    if len(errors) == 0:
-        logger.info("No error")
-    else:
-        for err in errors:
-            logger.info("* %s", err)
-    logger.info("\nend time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -269,5 +260,5 @@ if __name__ == "__main__":
                 gn_to_gs_fix(layer, resource_found, args.dry_run, creds, args.disable_ssl_verification)
             except Inconsistency as e:
                 errors.append(e)
-    print_report(errors)
+    print_report(logger, errors)
 

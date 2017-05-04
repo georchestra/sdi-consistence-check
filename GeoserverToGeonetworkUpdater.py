@@ -41,7 +41,7 @@ from credentials import Credentials
 from cswquerier import CSWQuerier
 from inconsistency import GsToGnUnableToCreateServiceMetadataInconsistency, Inconsistency, \
     GsToGnUnableToUpdateServiceMetadataInconsistency
-from utils import find_data_metadata
+from utils import find_data_metadata, print_report
 
 
 def init_mdd_mds_mapping(cswQuerier):
@@ -81,31 +81,23 @@ def print_banner(args):
     logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
     logger.info("\n\n")
 
-def guess_geonetwork_url(url):
-    """
-    Guesses the geonetwork URL.
-    :param url: the URL where the GeoNetwork base URL has to be guessed.
-    :return: the url found.
-    """
-    m = re.search('(.*\/geonetwork\/).*', url)
-    return m.group(1)
-
 
 def workspace_service_url(gs_url, workspace, service):
     return "%s/%s/ows?service=%s" % (gs_url, workspace, service)
 
-def guess_related_service_metadata(md_url, gs_url, workspace, service):
+
+def guess_related_service_metadata(gs_url, gn_url, workspace, service):
     """
     Retrieves the associated metadata from the same catalog (assuming it is a GeoNetwork)
-    :param md_url: the original metadata Url
+
     :param md: the parsed metadata
     :param gs_url: the GeoServer base URL
+    :param gn_url: the catalogue base URL
     :param workspace: the workspace name
     :param service: the targeted service (WMS or WFS)
     :return the service metadata related to the service, if found
     """
-    gn_cswurl = "%ssrv/eng/csw" % guess_geonetwork_url(md_url)
-    # TODO: how to cache results ?
+    gn_cswurl = "%s/srv/eng/csw" % gn_url
     csw_q = CSWQuerier(gn_cswurl)
     mds = csw_q.get_all_records(constraint=[csw_q.is_service, csw_q.non_harvested])
     expected_service_url = workspace_service_url(gs_url, workspace, service)
@@ -223,17 +215,20 @@ if __name__ == "__main__":
     except SSLError as e:
         logger.error("Unable to connect: SSL error (hint: use --disable-ssl-verification option)")
         sys.exit(1)
+
     if workspace is None:
         logger.error("workspace \"%s\" not found" % args.workspace)
         sys.exit(1)
+
     else:
         resources = gscatalog.get_resources(workspace=workspace)
         for res in resources:
             try:
-                md_url, md = find_data_metadata(res, creds)
-
+                # UUID from MDD is needed for operatesOn elements
+                md_url, md = find_data_metadata(res, creds, args.disable_ssl_verification)
                 layer = gscatalog.get_layer(name="%s:%s" % (res.workspace.name, res.name))
-                linked_md = guess_related_service_metadata(md_url, args.geoserver, args.workspace, args.service)
+                linked_md = guess_related_service_metadata(args.geoserver, args.geonetwork,
+                                                           args.workspace, args.service)
                 if linked_md is None:
                     # Creates a new service metadata for the workspace
                     logger.info("No service metadata found for %s, creating one", args.workspace)
@@ -247,31 +242,36 @@ if __name__ == "__main__":
                                             "l'espace de travail \"%s\" (%s)" % (args.workspace, args.service),
                                 'layers': []
                     }
-                    # reiterates on the resources object
+                    # reiterates on the resources object, to first create the complete service metadata
+                    # (with all the linked data MD).
                     # this should not harm since we don't touch to the array, and access it only in a read-only mode
                     for r2 in resources:
                         try:
-                            r2mdurl, r2md = find_data_metadata(r2, creds)
+                            r2mdurl, r2md = find_data_metadata(r2, creds, args.disable_ssl_verification)
                             data['layers'].append({'mdd_uuid': r2md.identifier, 'mdd_url': r2mdurl, 'name': r2.name})
                         except:
-                            logger.error("Unable to find all the data metadata for some layers on workspace %s,"
-                                         "generated service metadata might be incomplete.", args.workspace)
+                            logger.error("Unable to find all the data metadata for some layers on workspace '%s',"
+                                         " generated service metadata might be incomplete.", args.workspace)
+                            logger.error("Layer with missing data metadata URL: '%s:%s'", args.workspace,
+                                         r2.name)
                     new_srv_md = create_service_metadata_from_template(data)
                     if not args.dry_run:
                         insert_metadata(args.geonetwork, args.workspace, new_srv_md, creds)
                     else:
-                        logger.info("Dry-run: would have created a service metadata on workspace %s",
-                                    linked_md.identifier, md.identifier)
+                        logger.info("Dry-run: would have created a service metadata for workspace '%s'"
+                                    " and metadata '%s'", args.workspace, md.identifier)
                 else:
                     # service metadata found for the current workspace
-                    # check if the mds references (operatesOn) the MDD
+                    # we still have to check if the mds references (operatesOn)
+                    # all the MDD defined in the layers' workspace.
                     operateson_found = False
                     for oon in linked_md.serviceidentification.operateson:
                         if oon['uuidref'] == md.identifier:
                             operateson_found = True
                             break
                     if not operateson_found:
-                        logger.error("MDD is not referenced into the service MD. Adding the operatesOn link")
+                        logger.info("MDD '%s' is not referenced into the service MD '%s' (on server '%s'). "
+                                    "Adding the operatesOn link", md_url, linked_md.identifier, args.geonetwork)
                         xml_mds = add_operates_on(linked_md.xml, md_url, md.identifier)
                         if not args.dry_run:
                             update_metadata(args.geonetwork, linked_md.identifier, xml_mds, creds)
@@ -297,4 +297,4 @@ if __name__ == "__main__":
     #        else:
     #            data_to_service_map[oon['uuidref']] = data_to_service_map[oon['uuidref']] + [uuid]
 
-    print_report(errors)
+    print_report(logger, errors)
