@@ -48,4 +48,4 @@ def print_report(logger, errors):
     else:
         for err in errors:
             logger.info("* %s", err)
-    logger.info("\nend time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
+    logger.info("\nEnd time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))

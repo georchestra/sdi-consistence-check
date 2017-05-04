@@ -74,11 +74,11 @@ def print_banner(args):
     :return: nothing.
     """
     logger.info("\nGeoserver To Geonetwork Updater\n\n")
-    logger.info("workspace to query: %s", args.workspace)
+    logger.info("Workspace to query: %s", args.workspace)
     logger.info("GeoServer: %s", args.geoserver)
     logger.info("GeoNetwork where to insert created metadata: %s", args.geonetwork)
-    logger.info("dry-run: %s", args.dry_run)
-    logger.info("\nstart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
+    logger.info("Dry-run: %s", args.dry_run)
+    logger.info("\nStart time: %s", strftime("%Y-%m-%d %H:%M:%S", localtime()))
     logger.info("\n\n")
 
 
@@ -217,7 +217,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if workspace is None:
-        logger.error("workspace \"%s\" not found" % args.workspace)
+        logger.error("Workspace \"%s\" not found" % args.workspace)
         sys.exit(1)
 
     else:
