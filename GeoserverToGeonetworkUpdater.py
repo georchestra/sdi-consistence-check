@@ -33,6 +33,7 @@ from time import strftime
 from geoserver.catalog import Catalog
 from mako.template import Template
 from owslib.csw import CatalogueServiceWeb
+from requests.exceptions import SSLError
 
 from GeonetworkToGeoserverUpdater import print_report
 from bypassSSLVerification import bypassSSLVerification
@@ -217,11 +218,14 @@ if __name__ == "__main__":
 
     gscatalog = Catalog(args.geoserver + "/rest/", username=user, password=password)
     errors = []
-
-    workspace = gscatalog.get_workspace(name=args.workspace)
+    try:
+        workspace = gscatalog.get_workspace(name=args.workspace)
+    except SSLError as e:
+        logger.error("Unable to connect: SSL error (hint: use --disable-ssl-verification option)")
+        sys.exit(1)
     if workspace is None:
         logger.error("workspace \"%s\" not found" % args.workspace)
-        sys.exit()
+        sys.exit(1)
     else:
         resources = gscatalog.get_resources(workspace=workspace)
         for res in resources:
