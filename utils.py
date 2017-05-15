@@ -13,6 +13,7 @@ def find_data_metadata(resource, credentials, no_ssl_check=False):
     Retrieves and parse a remote metadata, given a gsconfig object (resource or layergroup).
     :param resource: an object from the gsconfig python library (either a resource or a layergroup)
     :param credentials: an object that store credential for various OGC services
+    :param no_ssl_check: boolean indicating if SSL certificate check should be deactivated (False by default)
     :return: a tuple (url, parsed metadata).
     """
     if resource.metadata_links is None:

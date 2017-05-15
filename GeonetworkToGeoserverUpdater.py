@@ -216,7 +216,7 @@ if __name__ == "__main__":
             for res in resources:
                 try:
                     layer = gscatalog.get_layer(res.workspace.name + ":" + res.name)
-                    gn_to_gs_fix(layer, res, args.dry_run, creds)
+                    gn_to_gs_fix(layer, res, args.dry_run, creds, args.disable_ssl_verification)
                 except Inconsistency as e:
                     errors.append(e)
     # Single layer
