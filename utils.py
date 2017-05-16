@@ -18,7 +18,11 @@ def load_workspaces_mapping(file):
     config.read("./template/workspaces-mapping.ini.example")
     ret = {}
     for elem in config.sections():
-        ret[elem] = { 'title': config.get(elem, "title"), 'abstract': config.get(elem, "abstract") }
+        ret[elem] = { 'title_wms': config.get(elem, "title_wms"),
+                      'abstract_wms': config.get(elem, "abstract_wms"),
+                      'title_wfs': config.get(elem, "title_wfs"),
+                      'abstract_wfs': config.get(elem, "abstract_wfs")
+                      }
     return ret
 
 def find_data_metadata(resource, credentials, no_ssl_check=False):

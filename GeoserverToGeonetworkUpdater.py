@@ -247,8 +247,8 @@ if __name__ == "__main__":
                     abstract = "Métadonnée de service décrivant " \
                         "l'espace de travail \"%s\" (%s)" % (args.workspace, args.service)
                     try:
-                        title = workspaces_mappings[args.workspace]['title']
-                        abstract = workspaces_mappings[args.workspace]['abstract']
+                        title = workspaces_mappings[args.workspace]['title_' + args.service]
+                        abstract = workspaces_mappings[args.workspace]['abstract_' + args.service]
                     except Exception as e:
                         logger.error("Unable to get a title or an abstract for created metadata, using default values")
                     data = {
