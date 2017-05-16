@@ -1,0 +1,16 @@
+
+# one section per workspace, the section has to be named as the GeoServer workspace
+# each section should contain a title and an abstract
+
+[test]
+
+title=Service de visualisation (WMS) des données géographiques de Rennes Métropole couvertes par le thème "mobilité transport : déplacement collectif"
+# Using several lines is possible, but a tab character should follow the new line, e.g.:
+
+abstract=Service de consultation des données de Rennes Métropole couvertes par le thème "mobilité transport : déplacement collectif" de la nomenclature thématique GéoBretagne.
+    Ce service répond aux standards WMS 1.1.1 et 1.3.0 de l'Open GIS Consortium (OGC).
+
+[ladm_terri]
+title=Service de visualisation (WMS) des données géographiques de Rennes Métropole couvertes par le thème "limites administratives et découpage des territoires"
+abstract=Service de consultation des données de Rennes Métropole couvertes par le thème "limites administratives et découpage des territoires" de la nomenclature thématique GéoBretagne.
+    Ce service répond aux standards WMS 1.1.1 et 1.3.0 de l'Open GIS Consortium (OGC).

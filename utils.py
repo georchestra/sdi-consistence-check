@@ -1,3 +1,4 @@
+import configparser
 import ssl
 from time import strftime, localtime
 from urllib.request import urlopen, Request
@@ -7,6 +8,18 @@ from owslib.etree import etree
 
 from inconsistency import GsMetadataMissingInconsistency, GsToGnMetadataInvalidInconsistency
 
+def load_workspaces_mapping(file):
+    """
+    Reads the given file as a workspace mapping INI file
+    :param file:
+    :return: a dictionary which represents the loaded INI file
+    """
+    config = configparser.ConfigParser()
+    config.read("./template/workspaces-mapping.ini.example")
+    ret = {}
+    for elem in config.sections():
+        ret[elem] = { 'title': config.get(elem, "title"), 'abstract': config.get(elem, "abstract") }
+    return ret
 
 def find_data_metadata(resource, credentials, no_ssl_check=False):
     """

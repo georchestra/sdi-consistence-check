@@ -41,7 +41,7 @@ from credentials import Credentials
 from cswquerier import CSWQuerier
 from inconsistency import GsToGnUnableToCreateServiceMetadataInconsistency, Inconsistency, \
     GsToGnUnableToUpdateServiceMetadataInconsistency
-from utils import find_data_metadata, print_report
+from utils import find_data_metadata, print_report, load_workspaces_mapping
 
 
 def init_mdd_mds_mapping(cswQuerier):
@@ -123,6 +123,7 @@ def create_service_metadata_from_template(data):
                      as identifier to get the MD),
       'current_datetime': "YYYY-mm-dd HH:mm",
       'abstract': abstract for the metadata,
+      'title': a title for the metadata,
       'layers': [
         'mdd_uuid': the uuid of the data metadata,
         'mdd_url': the URL of the data metadata,
@@ -190,6 +191,9 @@ if __name__ == "__main__":
     parser.add_argument("--service", help="The service ('wfs' or 'wms')", choices=['wms', 'wfs'])
     parser.add_argument("--dry-run", help="Dry-run mode", action='store_true', default=False)
     parser.add_argument("--disable-ssl-verification", help="Disable certificate verification", action="store_true")
+    parser.add_argument("--workspaces-mapping", help="the INI file to be loaded to resolve title and abstract on "
+                                                     "created service metadata",
+                        default="template/workspaces-mapping.ini.example")
 
     args = parser.parse_args(sys.argv[1:])
     if (args.workspace is None or args.geoserver is None or
@@ -207,6 +211,13 @@ if __name__ == "__main__":
     # Load credentials
     creds = Credentials(logger=logger)
     (user, password) = creds.getFromUrl(args.geoserver)
+
+    # Load the mapping file
+    try:
+        workspaces_mappings = load_workspaces_mapping(args.workspaces_mapping)
+    except Exception as e:
+        logger.error("Unable to load the mapping file for title/abstract.", e)
+        sys.exit(1)
 
     gscatalog = Catalog(args.geoserver + "/rest/", username=user, password=password)
     errors = []
@@ -232,14 +243,22 @@ if __name__ == "__main__":
                 if linked_md is None:
                     # Creates a new service metadata for the workspace
                     logger.info("No service metadata found for %s, creating one", args.workspace)
+                    title = args.workspace
+                    abstract = "Métadonnée de service décrivant " \
+                        "l'espace de travail \"%s\" (%s)" % (args.workspace, args.service)
+                    try:
+                        title = workspaces_mappings[args.workspace]['title']
+                        abstract = workspaces_mappings[args.workspace]['abstract']
+                    except Exception as e:
+                        logger.error("Unable to get a title or an abstract for created metadata, using default values")
                     data = {
                                 'file_identifier': uuid.uuid4(),
                                 'current_date': strftime("%Y-%m-%d", localtime()),
                                 'service_name': args.workspace,
                                 'service_url': workspace_service_url(args.geoserver, args.workspace, args.service),
                                 'current_datetime': strftime("%Y-%m-%d %H:%M:%S", localtime()),
-                                'abstract': "Métadonnée de service décrivant "
-                                            "l'espace de travail \"%s\" (%s)" % (args.workspace, args.service),
+                                'abstract': abstract,
+                                'title': title,
                                 'layers': []
                     }
                     # reiterates on the resources object, to first create the complete service metadata
@@ -248,7 +267,12 @@ if __name__ == "__main__":
                     for r2 in resources:
                         try:
                             r2mdurl, r2md = find_data_metadata(r2, creds, args.disable_ssl_verification)
-                            data['layers'].append({'mdd_uuid': r2md.identifier, 'mdd_url': r2mdurl, 'name': r2.name})
+                            data['layers'].append({
+                                'mdd_uuid': r2md.identifier,
+                                'mdd_url': r2mdurl,
+                                'name': r2.name,
+                                'title': r2.title
+                            })
                         except:
                             logger.error("Unable to find all the data metadata for some layers on workspace '%s',"
                                          " generated service metadata might be incomplete.", args.workspace)
