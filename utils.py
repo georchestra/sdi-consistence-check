@@ -8,21 +8,22 @@ from owslib.etree import etree
 
 from inconsistency import GsMetadataMissingInconsistency, GsToGnMetadataInvalidInconsistency
 
-def load_workspaces_mapping(file):
+def load_workspaces_mapping(file="./template/workspaces-mapping.ini.example"):
     """
     Reads the given file as a workspace mapping INI file
     :param file:
     :return: a dictionary which represents the loaded INI file
     """
     config = configparser.ConfigParser()
-    config.read("./template/workspaces-mapping.ini.example")
+    config.read(file)
     ret = {}
     for elem in config.sections():
-        ret[elem] = { 'title_wms': config.get(elem, "title_wms"),
-                      'abstract_wms': config.get(elem, "abstract_wms"),
-                      'title_wfs': config.get(elem, "title_wfs"),
-                      'abstract_wfs': config.get(elem, "abstract_wfs")
-                      }
+        ret[elem] = {
+            'title_wms': config.get(elem, "title_wms"),
+            'abstract_wms': config.get(elem, "abstract_wms"),
+            'title_wfs': config.get(elem, "title_wfs"),
+            'abstract_wfs': config.get(elem, "abstract_wfs")
+        }
     return ret
 
 def find_data_metadata(resource, credentials, no_ssl_check=False):

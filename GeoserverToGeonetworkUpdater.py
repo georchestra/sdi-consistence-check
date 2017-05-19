@@ -110,7 +110,7 @@ def guess_related_service_metadata(gs_url, gn_url, workspace, service):
     return None
 
 
-def create_service_metadata_from_template(data):
+def create_service_metadata_from_template(data, service_type):
     """
         Returns a string suitable for a service metadata creation via CSW-T insert operation.
 
@@ -130,9 +130,10 @@ def create_service_metadata_from_template(data):
         'name': the layer name
       ]
     }
+    :param service_type: the service type ('wms' or 'wfs')
     :return: a string representing the XML service metadata
     """
-    return Template(filename="template/service-metadata.xml").render(**data)
+    return Template(filename="template/service-metadata-%s.xml" % (service_type)).render(**data)
 
 
 def insert_metadata(gn_url, workspace, record, credentials=Credentials()):
@@ -278,7 +279,7 @@ if __name__ == "__main__":
                                          " generated service metadata might be incomplete.", args.workspace)
                             logger.error("Layer with missing data metadata URL: '%s:%s'", args.workspace,
                                          r2.name)
-                    new_srv_md = create_service_metadata_from_template(data)
+                    new_srv_md = create_service_metadata_from_template(data, args.service)
                     if not args.dry_run:
                         insert_metadata(args.geonetwork, args.workspace, new_srv_md, creds)
                     else:

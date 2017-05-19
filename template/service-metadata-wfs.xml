@@ -69,8 +69,51 @@
    <gmd:metadataStandardVersion>
       <gco:CharacterString>1.0</gco:CharacterString>
    </gmd:metadataStandardVersion>
-   <gmd:referenceSystemInfo/>
-   <gmd:identificationInfo>
+   <gmd:referenceSystemInfo>
+      <gmd:MD_ReferenceSystem>
+         <gmd:referenceSystemIdentifier>
+            <gmd:RS_Identifier>
+               <gmd:code>
+                  <gco:CharacterString>RGF93 / CC48 (EPSG:3948)</gco:CharacterString>
+               </gmd:code>
+            </gmd:RS_Identifier>
+         </gmd:referenceSystemIdentifier>
+      </gmd:MD_ReferenceSystem>
+  </gmd:referenceSystemInfo>
+   <gmd:referenceSystemInfo>
+      <gmd:MD_ReferenceSystem>
+         <gmd:referenceSystemIdentifier>
+            <gmd:RS_Identifier>
+               <gmd:code>
+                  <gco:CharacterString>RGF93 / Lambert 93 (EPSG:2154)</gco:CharacterString>
+               </gmd:code>
+            </gmd:RS_Identifier>
+         </gmd:referenceSystemIdentifier>
+      </gmd:MD_ReferenceSystem>
+  </gmd:referenceSystemInfo>
+   <gmd:referenceSystemInfo>
+      <gmd:MD_ReferenceSystem>
+         <gmd:referenceSystemIdentifier>
+            <gmd:RS_Identifier>
+               <gmd:code>
+                  <gco:CharacterString>WGS84 (EPSG:4326)</gco:CharacterString>
+               </gmd:code>
+            </gmd:RS_Identifier>
+         </gmd:referenceSystemIdentifier>
+      </gmd:MD_ReferenceSystem>
+  </gmd:referenceSystemInfo>
+   <gmd:referenceSystemInfo>
+      <gmd:MD_ReferenceSystem>
+         <gmd:referenceSystemIdentifier>
+            <gmd:RS_Identifier>
+               <gmd:code>
+                  <gco:CharacterString>webmercator (EPSG:3857)</gco:CharacterString>
+               </gmd:code>
+            </gmd:RS_Identifier>
+         </gmd:referenceSystemIdentifier>
+      </gmd:MD_ReferenceSystem>
+  </gmd:referenceSystemInfo>
+   <gmd:identificationInfo xmlns:date="http://exslt.org/dates-and-times">
       <srv:SV_ServiceIdentification>
          <gmd:citation>
             <gmd:CI_Citation>
@@ -85,6 +128,17 @@
                      <gmd:dateType>
                         <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_DateTypeCode"
                                              codeListValue="creation"/>
+                     </gmd:dateType>
+                  </gmd:CI_Date>
+               </gmd:date>
+               <gmd:date>
+                  <gmd:CI_Date>
+                     <gmd:date>
+                        <gco:Date>2017-05-16</gco:Date>
+                     </gmd:date>
+                     <gmd:dateType>
+                        <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_DateTypeCode"
+                                             codeListValue="revision"/>
                      </gmd:dateType>
                   </gmd:CI_Date>
                </gmd:date>
@@ -161,10 +215,13 @@
          <gmd:descriptiveKeywords>
             <gmd:MD_Keywords>
                <gmd:keyword>
-                  <gco:CharacterString>wms 1.1.1</gco:CharacterString>
+                  <gco:CharacterString>wfs 1.0.0</gco:CharacterString>
                </gmd:keyword>
                <gmd:keyword>
-                  <gco:CharacterString>wms 1.3.0</gco:CharacterString>
+                  <gco:CharacterString>wfs 1.1.1</gco:CharacterString>
+               </gmd:keyword>
+               <gmd:keyword>
+                  <gco:CharacterString>wfs 2.0.0</gco:CharacterString>
                </gmd:keyword>
                <gmd:type>
                   <gmd:MD_KeywordTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_KeywordTypeCode"
@@ -175,7 +232,7 @@
          <gmd:descriptiveKeywords>
             <gmd:MD_Keywords>
                <gmd:keyword>
-                  <gco:CharacterString>infoMapAccessService</gco:CharacterString>
+                  <gco:CharacterString>infoFeatureAccessService</gco:CharacterString>
                </gmd:keyword>
                <gmd:type>
                   <gmd:MD_KeywordTypeCode codeList="http://www.isotc211.org/2005/resources/codeList.xml#MD_KeywordTypeCode"
@@ -197,20 +254,6 @@
                            </gmd:dateType>
                         </gmd:CI_Date>
                      </gmd:date>
-                     <gmd:identifier>
-                        <gmd:MD_Identifier>
-                           <gmd:code>
-                              <gmx:Anchor xlink:href="http://geosourcetest.brgm-rec.fr/geosource/srv/en/thesaurus.download?ref=external.theme.inspire-service-taxonomy">geonetwork.thesaurus.external.theme.inspire-service-taxonomy</gmx:Anchor>
-                           </gmd:code>
-                        </gmd:MD_Identifier>
-                     </gmd:identifier>
-                     <gmd:identifier>
-                        <gmd:MD_Identifier>
-                           <gmd:code>
-                              <gco:CharacterString>https://public.sig.rennesmetropole.fr/geoserver/trp_coll/ows?service=wms&amp;request=GetCapabilities</gco:CharacterString>
-                           </gmd:code>
-                        </gmd:MD_Identifier>
-                     </gmd:identifier>
                   </gmd:CI_Citation>
                </gmd:thesaurusName>
             </gmd:MD_Keywords>
@@ -224,37 +267,12 @@
                   <gmd:MD_KeywordTypeCode codeList="http://www.isotc211.org/2005/resources/codeList.xml#MD_KeywordTypeCode"
                                           codeListValue="theme"/>
                </gmd:type>
-               <gmd:thesaurusName>
-                  <gmd:CI_Citation>
-                     <gmd:title>
-                        <gco:CharacterString>RM Diffusion v 1.2</gco:CharacterString>
-                     </gmd:title>
-                     <gmd:date>
-                        <gmd:CI_Date>
-                           <gmd:date>
-                              <gco:Date>2014-02-12</gco:Date>
-                           </gmd:date>
-                           <gmd:dateType>
-                              <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_DateTypeCode"
-                                                   codeListValue="publication"/>
-                           </gmd:dateType>
-                        </gmd:CI_Date>
-                     </gmd:date>
-                     <gmd:identifier>
-                        <gmd:MD_Identifier>
-                           <gmd:code>
-                              <gmx:Anchor xlink:href="http://public/geonetwork/srv/eng/thesaurus.download?ref=external.theme.rm_diffusion">geonetwork.thesaurus.external.theme.rm_diffusion</gmx:Anchor>
-                           </gmd:code>
-                        </gmd:MD_Identifier>
-                     </gmd:identifier>
-                  </gmd:CI_Citation>
-               </gmd:thesaurusName>
             </gmd:MD_Keywords>
          </gmd:descriptiveKeywords>
          <gmd:resourceConstraints>
             <gmd:MD_LegalConstraints>
                <gmd:useLimitation>
-                  <gco:CharacterString>Réutilisation libre sous réserve des mentions obligatoires présentes dans chaque métadonnée.</gco:CharacterString>
+                  <gco:CharacterString>Réutilisation libre sous réserve des mentions obligatoires et des licences de réutilisation présentes dans chaque métadonnée.</gco:CharacterString>
                </gmd:useLimitation>
                <gmd:accessConstraints>
                   <gmd:MD_RestrictionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#MD_RestrictionCode"
@@ -270,7 +288,7 @@
             </gmd:MD_LegalConstraints>
          </gmd:resourceConstraints>
          <srv:serviceType>
-            <gco:LocalName>view</gco:LocalName>
+            <gco:LocalName>download</gco:LocalName>
          </srv:serviceType>
          <srv:extent>
             <gmd:EX_Extent>
@@ -323,9 +341,6 @@
                      <gmd:linkage>
                         <gmd:URL>${service_url}</gmd:URL>
                      </gmd:linkage>
-                     <gmd:protocol>
-                        <gco:CharacterString>OGC:WMS</gco:CharacterString>
-                     </gmd:protocol>
                   </gmd:CI_OnlineResource>
                </srv:connectPoint>
             </srv:SV_OperationMetadata>
@@ -333,7 +348,7 @@
          <srv:containsOperations>
             <srv:SV_OperationMetadata>
                <srv:operationName>
-                  <gco:CharacterString>GetMap</gco:CharacterString>
+                  <gco:CharacterString>DescribeFeatureType</gco:CharacterString>
                </srv:operationName>
                <srv:DCP>
                   <srv:DCPList codeList="http://www.isotc211.org/2005/iso19119/resources/Codelist/gmxCodelists.xml#DCPList"
@@ -344,9 +359,6 @@
                      <gmd:linkage>
                         <gmd:URL>${service_url}</gmd:URL>
                      </gmd:linkage>
-                     <gmd:protocol>
-                        <gco:CharacterString>OGC:WMS</gco:CharacterString>
-                     </gmd:protocol>
                   </gmd:CI_OnlineResource>
                </srv:connectPoint>
             </srv:SV_OperationMetadata>
@@ -354,7 +366,7 @@
          <srv:containsOperations>
             <srv:SV_OperationMetadata>
                <srv:operationName>
-                  <gco:CharacterString>GetFeatureInfo</gco:CharacterString>
+                  <gco:CharacterString>GetFeature</gco:CharacterString>
                </srv:operationName>
                <srv:DCP>
                   <srv:DCPList codeList="http://www.isotc211.org/2005/iso19119/resources/Codelist/gmxCodelists.xml#DCPList"
@@ -365,9 +377,24 @@
                      <gmd:linkage>
                         <gmd:URL>${service_url}</gmd:URL>
                      </gmd:linkage>
-                     <gmd:protocol>
-                        <gco:CharacterString>OGC:WMS</gco:CharacterString>
-                     </gmd:protocol>
+                  </gmd:CI_OnlineResource>
+               </srv:connectPoint>
+            </srv:SV_OperationMetadata>
+         </srv:containsOperations>
+         <srv:containsOperations>
+            <srv:SV_OperationMetadata>
+               <srv:operationName>
+                  <gco:CharacterString>GetPropertyValue</gco:CharacterString>
+               </srv:operationName>
+               <srv:DCP>
+                  <srv:DCPList codeList="http://www.isotc211.org/2005/iso19119/resources/Codelist/gmxCodelists.xml#DCPList"
+                               codeListValue="WebServices"/>
+               </srv:DCP>
+               <srv:connectPoint>
+                  <gmd:CI_OnlineResource>
+                     <gmd:linkage>
+                        <gmd:URL>${service_url}</gmd:URL>
+                     </gmd:linkage>
                   </gmd:CI_OnlineResource>
                </srv:connectPoint>
             </srv:SV_OperationMetadata>
@@ -383,10 +410,10 @@
          <gmd:distributionFormat>
             <gmd:MD_Format>
                <gmd:name>
-                  <gco:CharacterString>OGC:WMS</gco:CharacterString>
+                  <gco:CharacterString>OGC:WFS</gco:CharacterString>
                </gmd:name>
                <gmd:version>
-                  <gco:CharacterString>1.3.0</gco:CharacterString>
+                  <gco:CharacterString>2.0.0</gco:CharacterString>
                </gmd:version>
             </gmd:MD_Format>
          </gmd:distributionFormat>
@@ -397,6 +424,9 @@
                      <gmd:linkage>
                         <gmd:URL>${service_url}</gmd:URL>
                      </gmd:linkage>
+                     <gmd:protocol>
+                        <gco:CharacterString>OGC:WFS</gco:CharacterString>
+                     </gmd:protocol>
                   </gmd:CI_OnlineResource>
                </gmd:onLine>
             </gmd:MD_DigitalTransferOptions>
@@ -427,12 +457,12 @@
                      <gmd:specification>
                         <gmd:CI_Citation>
                            <gmd:title>
-                              <gco:CharacterString>Règlement (UE) n° 976/2009</gco:CharacterString>
+                              <gco:CharacterString>Règlement (UE) n° 1088/2010</gco:CharacterString>
                            </gmd:title>
                            <gmd:date>
                               <gmd:CI_Date>
                                  <gmd:date>
-                                    <gco:Date>2009-10-09</gco:Date>
+                                    <gco:Date>2010-11-23</gco:Date>
                                  </gmd:date>
                                  <gmd:dateType>
                                     <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_DateTypeCode"
@@ -457,7 +487,19 @@
    <gmd:dataQualityInfo>
       <gmd:DQ_DataQuality>
          <gmd:scope>
-            <gmd:DQ_Scope/>
+            <gmd:DQ_Scope>
+               <gmd:level>
+                  <gmd:MD_ScopeCode codeListValue="service"
+                                    codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#MD_ScopeCode"/>
+               </gmd:level>
+               <gmd:levelDescription>
+                  <gmd:MD_ScopeDescription>
+                     <gmd:other>
+                        <gco:CharacterString>Service</gco:CharacterString>
+                     </gmd:other>
+                  </gmd:MD_ScopeDescription>
+               </gmd:levelDescription>
+            </gmd:DQ_Scope>
          </gmd:scope>
          <gmd:report>
             <gmd:DQ_DomainConsistency>
@@ -466,12 +508,12 @@
                      <gmd:specification>
                         <gmd:CI_Citation>
                            <gmd:title>
-                              <gco:CharacterString>Technical Guidance for the implementation of INSPIRE View Services - v3.1 – part 4</gco:CharacterString>
+                              <gco:CharacterString>Technical Guidance for the implementation of INSPIRE Download Services – level2 - v3.0</gco:CharacterString>
                            </gmd:title>
                            <gmd:date>
                               <gmd:CI_Date>
                                  <gmd:date>
-                                    <gco:Date>2011-11-07</gco:Date>
+                                    <gco:Date>2012-06-12</gco:Date>
                                  </gmd:date>
                                  <gmd:dateType>
                                     <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_DateTypeCode"
