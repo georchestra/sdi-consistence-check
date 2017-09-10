@@ -1,5 +1,7 @@
 # SDI consistence check
 
+[![Pulls](https://img.shields.io/docker/pulls/georchestra/sdi-consistence-check.svg)](https://hub.docker.com/r/georchestra/sdi-consistence-check/)
+
 This project aims to check the relevance between data (published into a GeoServer) and metadata (in GeoNetwork), and possibly fix the detected inconsistencies when possible (missing metadata, missing URL information, ...), following different scenarios.
 
 ## Usage
