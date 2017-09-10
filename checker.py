@@ -15,13 +15,6 @@ from inconsistency import Inconsistency, GnToGsLayerNotFoundInconsistency, GnToG
 from owscheck import OwsChecker
 from bypassSSLVerification import bypassSSLVerification
 
-# Logging configuration
-logger = logging.getLogger("owschecker")
-out_hdlr = logging.StreamHandler(sys.stdout)
-out_hdlr.setLevel(logging.INFO)
-logger.addHandler(out_hdlr)
-logger.setLevel(logging.INFO)
-
 
 def print_banner(args):
     logger.info("\nSDI check\n\n")
@@ -88,7 +81,17 @@ if __name__ == "__main__":
     parser.add_argument("--only-err", help="Only display errors, no summary informations will be displayed",
                         action="store_true")
 
+    parser.add_argument("--log-to-file", help="If a file path is specified, log output to this file, not stdout")
+
     args = parser.parse_args(sys.argv[1:])
+
+    logger = logging.getLogger("owschecker")
+    hdlr = logging.FileHandler(args.log_to_file, mode='w') if args.log_to_file is not None \
+        else logging.StreamHandler(sys.stdout)
+    hdlr.setLevel(logging.INFO)
+    logger.addHandler(hdlr)
+    logger.setLevel(logging.INFO)
+
     creds = Credentials(logger=logger)
 
     if args.disable_ssl_verification:
