@@ -122,6 +122,8 @@ if __name__ == "__main__":
                                                      "Ex: sdi.georchestra.org", nargs="+")
     parser.add_argument("--disable-ssl-verification", help="Disable certificate verification", action="store_true")
 
+    parser.add_argument("--check-layers", help="check WMS/WFS layer validity", action="store_true")
+
     parser.add_argument("--only-err", help="Only display errors, no summary informations will be displayed",
                         action="store_true")
 
@@ -155,7 +157,8 @@ if __name__ == "__main__":
         logger.debug("Querying %s ..." % args.server)
         ows_checker = None
         try:
-            ows_checker = OwsChecker(args.server, wms=(True if args.mode == "WMS" else False), creds=creds)
+            ows_checker = OwsChecker(args.server, wms=(True if args.mode == "WMS" else False), \
+                creds=creds, checkLayers = (args.check_layers != None))
             logger.debug("Finished integrity check against %s GetCapabilities", args.mode)
             print_layers_status(ows_checker)
             if not args.only_err:
