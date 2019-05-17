@@ -124,6 +124,7 @@ class OwsChecker:
     def __init__(self, serviceUrl, wms=True, creds=Credentials()):
         self._inconsistencies = []
         self._layer_names = []
+        self.wms = wms
         try:
             self._service = OwsServer(serviceUrl, wms, creds)
         except BaseException as e:
