@@ -139,10 +139,10 @@ if __name__ == "__main__":
             print_layers_status(ows_checker)
             if not args.only_err:
                 print_ows_report(ows_checker)
+            if args.xunit:
+                    generate_xunit_layers_status(ows_checker)
         except BaseException as e:
             logger.info("Unable to parse the remote OWS server: %s", str(e))
-        if args.xunit and ows_checker is not None:
-                generate_xunit_layers_status(ows_checker)
 
     elif args.mode == "CSW" and args.server is not None:
         total_mds = 0
