@@ -44,7 +44,7 @@ def print_layers_status(owschecker):
         logger.error("#%d\n  Layer: %s", error.layer_index, error.layer_name)
         logger.error("  Error: %s\n" % str(error))
 
-def generate_xunit_layers_status(owschecker):
+def generate_ows_xunit_layers_status(owschecker, output_file):
     errors = owschecker.get_inconsistencies()
     layers = owschecker.get_layer_names()
     layers_in_error = [ error.layer_index for error in errors ]
@@ -66,7 +66,7 @@ def generate_xunit_layers_status(owschecker):
         if error is not None:
             ET.SubElement(tcase, "error", { "type": type(error).__name__, "message": str(error) }).text = str(error)
     tree = ET.ElementTree(root)
-    tree.write("xunit.xml")
+    tree.write(output_file)
 
 def print_ows_report(owschecker):
     total_layers = len(owschecker.get_layer_names())
@@ -109,6 +109,8 @@ if __name__ == "__main__":
     parser.add_argument("--xunit", help="Generate a XML xunit result report",
                         action="store_true")
 
+    parser.add_argument("--xunit-output", help="Name of the xunit report file, defaults to ./xunit.xml", default="xunit.xml")
+
     parser.add_argument("--log-to-file", help="If a file path is specified, log output to this file, not stdout")
 
     args = parser.parse_args(sys.argv[1:])
@@ -140,7 +142,7 @@ if __name__ == "__main__":
             if not args.only_err:
                 print_ows_report(ows_checker)
             if args.xunit:
-                    generate_xunit_layers_status(ows_checker)
+                    generate_ows_xunit_layers_status(ows_checker, args.xunit_output)
         except BaseException as e:
             logger.info("Unable to parse the remote OWS server: %s", str(e))
 
@@ -175,7 +177,7 @@ if __name__ == "__main__":
                 # check onto a service MD.
                 total_mds += 1
                 if data_to_service_map.get(mdd_uuid) is None:
-                    # TODO file an issue if the dataMd as no ServiceMd linked to ?
+                    # TODO file an issue if the dataMd has no ServiceMd linked to ?
                     continue
                 # step 4: check the layer existence using the service URL
                 for sce_uuid in data_to_service_map[mdd_uuid]:
