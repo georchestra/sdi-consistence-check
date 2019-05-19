@@ -68,6 +68,25 @@ def generate_ows_xunit_layers_status(owschecker, output_file):
     tree = ET.ElementTree(root)
     tree.write(output_file)
 
+def generate_csw_xunit_layers_status(results, output_file):
+    """
+      Generates a xunit report for CSW analysis.
+      @param results an array containing the xml attributes to add to the testcase elements,
+             plus uuid and error (which will have to be popped before adding)
+      @param output_file the XML output filename to be generated, defaults to xunit.xml
+    """
+    nberrors = sum(1 for i in results if i['error'] is not None)
+    root = ET.Element("testsuite", {"name": "sdi-consistence-checker",
+        "tests": str(len(results)), "errors": str(nberrors), "failures": "0", "skip": "0" })
+    for result in results:
+        error = result.pop('error')
+        current_uuid = result.pop("uuid")
+        tcase = ET.SubElement(root, "testcase", result)
+        if error is not None:
+            ET.SubElement(tcase, "error", { "type": type(error).__name__, "message": str(error) }).text = str(error)
+    tree = ET.ElementTree(root)
+    tree.write(output_file)
+
 def print_ows_report(owschecker):
     total_layers = len(owschecker.get_layer_names())
     inconsistencies = owschecker.get_inconsistencies()
@@ -156,7 +175,7 @@ if __name__ == "__main__":
             logger.fatal("Unable to query the remote CSW:\nError: %s\nPlease check the CSW url", e)
             sys.exit(1)
         errors = []
-
+        reporting = []
         if args.inspire == "strict":
             # Step 1: get all data metadata
             datamd = csw_q.get_all_records(constraint=[csw_q.is_dataset])
@@ -176,8 +195,12 @@ if __name__ == "__main__":
                 # Note: this won't count the service metadata in the end, only the MDD that trigger a
                 # check onto a service MD.
                 total_mds += 1
+
                 if data_to_service_map.get(mdd_uuid) is None:
                     # TODO file an issue if the dataMd has no ServiceMd linked to ?
+                    if len([x for x in reporting if x['uuid'] == mdd_uuid]) == 0:
+                        reporting.append({ 'classname': 'CSW', 'name': mdd.identification.title, 'uuid': mdd_uuid,
+                              'time': '0', 'error': None })
                     continue
                 # step 4: check the layer existence using the service URL
                 for sce_uuid in data_to_service_map[mdd_uuid]:
@@ -186,9 +209,20 @@ if __name__ == "__main__":
                         mdd = datamd[mdd_uuid]
                         csw_q.check_service_md(mds, mdd, geoserver_to_check=args.geoserver_to_check if
                                                args.geoserver_to_check is not None else [])
+                        # No issue so far ?
+                        # since a MDD can reference several service metadata, consider
+                        # the MDD as passing tests only once (avoid adding several times the same MDD
+                        # to the array). It must be very unlikely to have several MDS anyway.
+                        if len([x for x in reporting if x['uuid'] == mdd_uuid]) == 0:
+                            reporting.append({ 'classname': 'CSW', 'name': mdd.title, 'uuid': mdd_uuid,
+                              'time': '0', 'error': None })
                     except Inconsistency as e:
                         logger.error(e)
                         errors.append(e)
+                        # Same as above: only adding the errored MDD once
+                        if len([x for x in reporting if x['uuid'] == mdd_uuid]) == 0:
+                            reporting.append({ 'classname': 'CSW', 'name': mdd.title, 'uuid': mdd_uuid,
+                              'time': '0', 'error': e })
 
         elif args.inspire == "flexible":
             global_idx = 0
@@ -236,15 +270,32 @@ if __name__ == "__main__":
                                         uuid, uri['protocol'], uri['url'], uri['name'], ex)
                             logger.info("    %s url: KO: %s: %s" % ("WMS" if from_wms else "WFS",
                                                                     uri['url'], str(errors[-1])))
+                            # in both cases, add the MDD in the reporting array
+                            if len([x for x in reporting if x['uuid'] == uuid]) == 0:
+                                reporting.append({ 'classname': 'CSW', 'name': current_md.title, 'uuid': uuid,
+                                    'time': '0', 'error': ex })
+
                     if not wms_found:
                         logger.info("    WMS url: KO: No wms url found in the metadata")
-                        errors.append(GnToGsNoOGCWmsDefined(uuid))
+                        err = GnToGsNoOGCWmsDefined(uuid)
+                        errors.append(err)
+                        reporting.append({ 'classname': 'CSW', 'name': current_md.title, 'uuid': uuid,
+                                    'time': '0', 'error': err })
+
                     if not wfs_found:
                         logger.info("    WFS url: KO: No wfs url found in the metadata")
-                        errors.append(GnToGsNoOGCWfsDefined(uuid))
+                        err = GnToGsNoOGCWfsDefined(uuid)
+                        errors.append(err)
+                        reporting.append({ 'classname': 'CSW', 'name': current_md.title, 'uuid': uuid,
+                                    'time': '0', 'error': err })
+                    if wms_found and wfs_found:
+                        reporting.append({ 'classname': 'CSW', 'name': current_md.title, 'uuid': uuid,
+                                    'time': '0', 'error': None })
                     logger.info("")
                     # end of current md
                     global_idx += 1
                 if csw_q.csw.results['nextrecord'] == 0:
                     break
         print_csw_report(errors, total_mds)
+        if args.xunit:
+            generate_csw_xunit_layers_status(reporting, args.xunit_output)
