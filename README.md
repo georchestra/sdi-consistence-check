@@ -7,9 +7,11 @@ This project aims to check the relevance between data (published into a GeoServe
 ## Usage
 
 ```
-usage: checker.py [-h] [--mode {WMS,WFS,CSW}] [--inspire {flexible,strict}]
+usage: checker.py [-h] --mode {WMS,WFS,CSW} [--inspire {flexible,strict}]
                   [--server SERVER]
                   [--geoserver-to-check GEOSERVER_TO_CHECK [GEOSERVER_TO_CHECK ...]]
+                  [--disable-ssl-verification] [--only-err] [--xunit]
+                  [--xunit-output XUNIT_OUTPUT] [--log-to-file LOG_TO_FILE]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -21,7 +23,18 @@ optional arguments:
                         https://sdi.georchestra.org/geoserver/wms)
   --geoserver-to-check GEOSERVER_TO_CHECK [GEOSERVER_TO_CHECK ...]
                         space-separated list of geoserver hostname to check in
-                        CSW mode. Ex: sdi.georchestra.org
+                        CSW mode with inspire strict option activated. Ex:
+                        sdi.georchestra.org
+  --disable-ssl-verification
+                        Disable certificate verification
+  --only-err            Only display errors, no summary informations will be
+                        displayed
+  --xunit               Generate a XML xunit result report
+  --xunit-output XUNIT_OUTPUT
+                        Name of the xunit report file, defaults to ./xunit.xml
+  --log-to-file LOG_TO_FILE
+                        If a file path is specified, log output to this file,
+                        not stdout
 ```
 
 You need to choose one "mode" from :
@@ -82,6 +95,11 @@ python3 checker.py --mode CSW --inspire=strict --geoserver-to-check sdi.georches
   --server https://sdi.georchestra.org/geonetwork/srv/fre/csw
 ```
 
+### Xunit format
+
+Xunit is an XML report output format used by several test frameworks, as Junit.
+using the options `--xunit` / `--xunit-output` will provide a report in this
+format, convenient if plugged in a CI environment like Jenkins.
 
 ## Setup
 
