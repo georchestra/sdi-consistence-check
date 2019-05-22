@@ -219,7 +219,7 @@ if __name__ == "__main__":
                     except Inconsistency as e:
                         logger.error(e)
                         errors.append(e)
-                        # Same as above: only adding the errored MDD once
+                        # Same as above: only adding the errored MDD once
                         if len([x for x in reporting if x['uuid'] == mdd_uuid]) == 0:
                             reporting.append({ 'classname': 'CSW', 'name': mdd.title, 'uuid': mdd_uuid,
                               'time': '0', 'error': e })
