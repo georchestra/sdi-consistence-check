@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import requests
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
+from owslib.util import ServiceException
 
 from credentials import Credentials
 from geometadata import GeoMetadata
@@ -15,7 +16,7 @@ class OwsServer:
     """
     Class which manages the consumption of OWS servers (WMS,WFS).
     """
-    def __init__(self, gsurl, wms=True, creds = Credentials()):
+    def __init__(self, gsurl, wms = True, creds = Credentials()):
         """
         constructor.
 
@@ -121,7 +122,7 @@ class OwsChecker:
     """
     logger = logging.getLogger("owschecker")
 
-    def __init__(self, serviceUrl, wms=True, creds=Credentials()):
+    def __init__(self, serviceUrl, wms=True, creds=Credentials(), checkLayers = False):
         self._inconsistencies = []
         self._layer_names = []
         self.wms = wms
@@ -138,6 +139,33 @@ class OwsChecker:
                 else:
                     fqLayerName = layer
                 self._layer_names.append(fqLayerName)
+
+                if checkLayers:
+                    # depending on OWS type, we'll have to check a different URL
+                    # either a GetMap or a GetFeature
+                    l = self._service.getLayer(fqLayerName)
+                    if self._service._ows.identification.type == "WMS":
+                        try:
+                            a = self._service._ows.getmap(layers=[fqLayerName], \
+                                srs='EPSG:4326', \
+                                format='image/png', \
+                                size=(10,10), \
+                                bbox=l.boundingBoxWGS84)
+                        except ServiceException as e:
+                            e.layer_name = fqLayerName
+                            e.layer_index = layer_idx
+                            self._inconsistencies.append(e)
+                    else:
+                        try:
+                            a = self._service._ows.getfeature(typename=fqLayerName, \
+                                srsname=l.crsOptions[0], \
+                                bbox=l.boundingBoxWGS84, \
+                                maxfeatures=1)
+                        except ServiceException as e:
+                            e.layer_name = fqLayerName
+                            e.layer_index = layer_idx
+                            self._inconsistencies.append(e)
+
                 mdUrls = self._service.getMetadatas(fqLayerName)
                 if len(mdUrls) == 0:
                     self._inconsistencies.append(GsMetadataMissingInconsistency(fqLayerName, layer_idx))
