@@ -10,7 +10,7 @@ This project aims to check the relevance between data (published into a GeoServe
 usage: checker.py [-h] --mode {WMS,WFS,CSW} [--inspire {flexible,strict}]
                   [--server SERVER]
                   [--geoserver-to-check GEOSERVER_TO_CHECK [GEOSERVER_TO_CHECK ...]]
-                  [--disable-ssl-verification] [--only-err] [--xunit]
+                  [--disable-ssl-verification] [--only-err] [--xunit] [--check-layers]
                   [--xunit-output XUNIT_OUTPUT] [--log-to-file LOG_TO_FILE]
 
 optional arguments:
@@ -25,6 +25,8 @@ optional arguments:
                         space-separated list of geoserver hostname to check in
                         CSW mode with inspire strict option activated. Ex:
                         sdi.georchestra.org
+  --check-layers        check WMS/WFS layer validity by performing sample WMS 
+                        GetMap or WFS GetFeature requests
   --disable-ssl-verification
                         Disable certificate verification
   --only-err            Only display errors, no summary informations will be
