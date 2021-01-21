@@ -11,7 +11,7 @@ usage: checker.py [-h] --mode {WMS,WFS,CSW} [--inspire {flexible,strict}]
                   [--server SERVER]
                   [--geoserver-to-check GEOSERVER_TO_CHECK [GEOSERVER_TO_CHECK ...]]
                   [--disable-ssl-verification] [--only-err] [--xunit] [--check-layers]
-                  [--xunit-output XUNIT_OUTPUT] [--log-to-file LOG_TO_FILE]
+                  [--xunit-output XUNIT_OUTPUT] [--log-to-file LOG_TO_FILE] [--timeout TIMEOUT]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -37,6 +37,8 @@ optional arguments:
   --log-to-file LOG_TO_FILE
                         If a file path is specified, log output to this file,
                         not stdout
+  --timeout             timout to access service. Default to 30 seconds. Can also be customised with
+                        REQUEST_TIMEOUT env var.
 ```
 
 You need to choose one "mode" from :
@@ -109,7 +111,7 @@ format, convenient if plugged in a CI environment like Jenkins.
 
 To install the needed dependencies, follow these steps. Note that a python3 runtime is required to launch this tool.
 
-```
+```bash
 # Make sure the needed dependencies are installed
 apt-get install virtualenv gcc python3-dev libproj-dev
 
