@@ -22,17 +22,15 @@ class CSWQuerier:
 
     protocol_regexp = re.compile("^OGC:(?P<type>WMS|WFS)(?:-(?P<version>\d+(?:\.\d+)*)(?:-[\w-]+)?)?$", re.IGNORECASE)
 
-    def __init__(self, url, credentials=Credentials(), cached_ows_services=None, logger=None):
+    def __init__(self, url, credentials=Credentials(),
+                 cached_ows_services=None, logger=None, timeout=30):
         (username, password) = credentials.getFromUrl(url)
         if logger is not None:
             self.logger = logger
         else:
             self.logger = logging.getLogger("cswquerier")
             self.logger.addHandler(logging.NullHandler())
-        if cached_ows_services is None:
-            self.owsServices = CachedOwsServices(credentials=credentials)
-        else:
-            self.owsServices = cached_ows_services
+        self.owsServices = cached_ows_services or CachedOwsServices(credentials=credentials, timeout=timeout)
         try:
             self.csw = CatalogueServiceWeb(url, username=username, password=password)
         except BaseException as ex:

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import logging
 import warnings
 import sys
@@ -134,6 +135,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--log-to-file", help="If a file path is specified, log output to this file, not stdout")
 
+    parser.add_argument("--timeout", help="Specify a timeout for request to external service.")
+
     args = parser.parse_args(sys.argv[1:])
 
     logger = logging.getLogger("owschecker")
@@ -144,6 +147,8 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
 
     creds = Credentials(logger=logger)
+
+    request_timeout = args.timeout or os.getenv('REQUEST_TIMEOUT', 30)
 
     if args.disable_ssl_verification:
         bypassSSLVerification()
@@ -157,8 +162,9 @@ if __name__ == "__main__":
         logger.debug("Querying %s ..." % args.server)
         ows_checker = None
         try:
-            ows_checker = OwsChecker(args.server, wms=(True if args.mode == "WMS" else False), \
-                creds=creds, checkLayers = (args.check_layers != None))
+            ows_checker = OwsChecker(args.server, wms=(True if args.mode == "WMS" else False),
+                                     creds=creds, checkLayers = (args.check_layers != None),
+                                     timeout=request_timeout)
             logger.debug("Finished integrity check against %s GetCapabilities", args.mode)
             print_layers_status(ows_checker)
             if not args.only_err:
@@ -170,10 +176,11 @@ if __name__ == "__main__":
 
     elif args.mode == "CSW" and args.server is not None:
         total_mds = 0
-        geoserver_services = CachedOwsServices(creds, disable_ssl=args.disable_ssl_verification)
+        geoserver_services = CachedOwsServices(creds,
+                                               disable_ssl=args.disable_ssl_verification,
+                                               timeout=request_timeout)
         try:
-            csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services,
-                               logger=logger)
+            csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services, logger=logger, timeout=request_timeout)
         except ServiceException as e:
             logger.fatal("Unable to query the remote CSW:\nError: %s\nPlease check the CSW url", e)
             sys.exit(1)

@@ -1,4 +1,5 @@
 import logging
+import os
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
 
@@ -16,7 +17,7 @@ class OwsServer:
     """
     Class which manages the consumption of OWS servers (WMS,WFS).
     """
-    def __init__(self, gsurl, wms = True, creds = Credentials()):
+    def __init__(self, gsurl, wms = True, creds = Credentials(), timeout=30):
         """
         constructor.
 
@@ -28,9 +29,13 @@ class OwsServer:
         u = urlparse(gsurl)
         (username, password) = creds.get(u.hostname)
         if wms:
-            self._ows = WebMapService(gsurl, username=username, password=password, version="1.3.0")
+            self._ows = WebMapService(gsurl, username=username,
+                                      password=password, version="1.3.0",
+                                      timeout=timeout)
         else:
-            self._ows = WebFeatureService(gsurl, username=username, password=password, version="1.1.0")
+            self._ows = WebFeatureService(gsurl, username=username,
+                                          password=password, version="1.1.0",
+                                          timeout=timeout)
         self._populateLayers()
 
     def _populateLayers(self):
@@ -75,10 +80,11 @@ class OwsServer:
 
 class CachedOwsServices:
 
-    def __init__(self, credentials = Credentials(), disable_ssl=False):
+    def __init__(self, credentials = Credentials(), disable_ssl=False, timeout=30):
         self._servers = { "wms" : {} , "wfs" : {} }
         self._credentials = credentials
         self._disable_ssl = disable_ssl
+        self._timeout = timeout
 
     def checkWfsLayer(self, url, name):
         self._checkLayer(url, name, is_wms=False)
@@ -92,7 +98,8 @@ class CachedOwsServices:
             (username, password) = self._credentials.getFromUrl(url)
             if username is not None and password is not None:
                 auth = (username,password)
-        resp = requests.get(url, auth=auth, verify=not self._disable_ssl)
+        resp = requests.get(url, auth=auth, verify=not self._disable_ssl,
+                            timeout=self._timeout)
         str_url = resp.text
         first_tag = ET.fromstring(str_url).tag.lower()
         if (first_tag.endswith("wms_capabilities" if is_wms else "wfs_capabilities")):
@@ -122,12 +129,12 @@ class OwsChecker:
     """
     logger = logging.getLogger("owschecker")
 
-    def __init__(self, serviceUrl, wms=True, creds=Credentials(), checkLayers = False):
+    def __init__(self, serviceUrl, wms=True, creds=Credentials(), checkLayers = False, timeout=30):
         self._inconsistencies = []
         self._layer_names = []
         self.wms = wms
         try:
-            self._service = OwsServer(serviceUrl, wms, creds)
+            self._service = OwsServer(serviceUrl, wms, creds, timeout=timeout)
         except BaseException as e:
             raise UnparseableGetCapabilitiesInconsistency(serviceUrl, str(e))
 
