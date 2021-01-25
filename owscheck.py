@@ -2,6 +2,7 @@ import logging
 import os
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
+from math import copysign
 
 import requests
 from owslib.wfs import WebFeatureService
@@ -157,7 +158,7 @@ class OwsChecker:
                                 srs='EPSG:4326', \
                                 format='image/png', \
                                 size=(10,10), \
-                                bbox=l.boundingBoxWGS84)
+                                bbox=self._reduced_bbox(l.boundingBoxWGS84))
                         except ServiceException as e:
                             e.layer_name = fqLayerName
                             e.layer_index = layer_idx
@@ -195,3 +196,8 @@ class OwsChecker:
 
     def get_layer_names(self):
         return self._layer_names
+
+    def _reduced_bbox(self, bbox):
+        return [b*0.1 for f in bbox]
+
+
