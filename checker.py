@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--log-to-file", help="If a file path is specified, log output to this file, not stdout")
 
-    parser.add_argument("--timeout", help="Specify a timeout for request to external service.")
+    parser.add_argument("--timeout", type=int, help="Specify a timeout for request to external service.")
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
     creds = Credentials(logger=logger)
 
-    request_timeout = args.timeout or os.getenv('REQUEST_TIMEOUT', 30)
+    request_timeout = args.timeout or int(os.getenv('REQUEST_TIMEOUT', 30))
 
     if args.disable_ssl_verification:
         bypassSSLVerification()
