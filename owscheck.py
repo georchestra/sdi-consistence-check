@@ -198,6 +198,9 @@ class OwsChecker:
         return self._layer_names
 
     def _reduced_bbox(self, bbox):
-        return [f*0.1 for f in bbox]
-
+        xmin, ymin, xmax, ymax = bbox
+        return [xmin+0.49*(xmax-xmin),
+             ymin+0.49*(ymax-ymin),
+             xmax-0.49*(xmax-xmin),
+             ymax-0.49*(ymax-ymin)]
 
