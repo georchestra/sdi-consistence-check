@@ -154,10 +154,10 @@ class OwsChecker:
                     l = self._service.getLayer(fqLayerName)
                     if self._service._ows.identification.type == "WMS":
                         try:
-                            a = self._service._ows.getmap(layers=[fqLayerName], \
-                                srs='EPSG:4326', \
-                                format='image/png', \
-                                size=(10,10), \
+                            a = self._service._ows.getmap(layers=[fqLayerName],
+                                srs='EPSG:4326',
+                                format='image/png',
+                                size=(10,10),
                                 bbox=self._reduced_bbox(l.boundingBoxWGS84))
                         except ServiceException as e:
                             e.layer_name = fqLayerName
@@ -165,9 +165,9 @@ class OwsChecker:
                             self._inconsistencies.append(e)
                     else:
                         try:
-                            a = self._service._ows.getfeature(typename=fqLayerName, \
-                                srsname=l.crsOptions[0], \
-                                bbox=l.boundingBoxWGS84, \
+                            a = self._service._ows.getfeature(typename=fqLayerName,
+                                srsname=l.crsOptions[0],
+                                bbox=self._reduced_bbox(l.boundingBoxWGS84),
                                 maxfeatures=1)
                         except ServiceException as e:
                             e.layer_name = fqLayerName
