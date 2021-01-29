@@ -2,6 +2,7 @@ import logging
 import os
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
+from math import copysign
 
 import requests
 from owslib.wfs import WebFeatureService
@@ -153,20 +154,20 @@ class OwsChecker:
                     l = self._service.getLayer(fqLayerName)
                     if self._service._ows.identification.type == "WMS":
                         try:
-                            a = self._service._ows.getmap(layers=[fqLayerName], \
-                                srs='EPSG:4326', \
-                                format='image/png', \
-                                size=(10,10), \
-                                bbox=l.boundingBoxWGS84)
+                            a = self._service._ows.getmap(layers=[fqLayerName],
+                                srs='EPSG:4326',
+                                format='image/png',
+                                size=(10,10),
+                                bbox=self._reduced_bbox(l.boundingBoxWGS84))
                         except ServiceException as e:
                             e.layer_name = fqLayerName
                             e.layer_index = layer_idx
                             self._inconsistencies.append(e)
                     else:
                         try:
-                            a = self._service._ows.getfeature(typename=fqLayerName, \
-                                srsname=l.crsOptions[0], \
-                                bbox=l.boundingBoxWGS84, \
+                            a = self._service._ows.getfeature(typename=fqLayerName,
+                                srsname=l.crsOptions[0],
+                                bbox=self._reduced_bbox(l.boundingBoxWGS84),
                                 maxfeatures=1)
                         except ServiceException as e:
                             e.layer_name = fqLayerName
@@ -195,3 +196,11 @@ class OwsChecker:
 
     def get_layer_names(self):
         return self._layer_names
+
+    def _reduced_bbox(self, bbox):
+        xmin, ymin, xmax, ymax = bbox
+        return [xmin+0.49*(xmax-xmin),
+             ymin+0.49*(ymax-ymin),
+             xmax-0.49*(xmax-xmin),
+             ymax-0.49*(ymax-ymin)]
+
