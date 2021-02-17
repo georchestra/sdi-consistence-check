@@ -142,9 +142,9 @@ if __name__ == "__main__":
     logger = logging.getLogger("owschecker")
     hdlr = logging.FileHandler(args.log_to_file, mode='w') if args.log_to_file is not None \
         else logging.StreamHandler(sys.stdout)
-    hdlr.setLevel(logging.INFO)
+    hdlr.setLevel(os.getenv("LOG_LEVEL",logging.INFO))
     logger.addHandler(hdlr)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(os.getenv("LOG_LEVEL", logging.INFO))
 
     creds = Credentials(logger=logger)
 
@@ -172,6 +172,7 @@ if __name__ == "__main__":
             if args.xunit:
                     generate_ows_xunit_layers_status(ows_checker, args.xunit_output)
         except BaseException as e:
+            logger.debug(e, exc_info=True)
             logger.info("Unable to parse the remote OWS server: %s", str(e))
 
     elif args.mode == "CSW" and args.server is not None:
@@ -182,6 +183,7 @@ if __name__ == "__main__":
         try:
             csw_q = CSWQuerier(args.server, credentials=creds, cached_ows_services=geoserver_services, logger=logger, timeout=request_timeout)
         except ServiceException as e:
+            logger.debug(e, exc_info=True)
             logger.fatal("Unable to query the remote CSW:\nError: %s\nPlease check the CSW url", e)
             sys.exit(1)
         errors = []
@@ -227,6 +229,7 @@ if __name__ == "__main__":
                             reporting.append({ 'classname': 'CSW', 'name': mdd.title, 'uuid': mdd_uuid,
                               'time': '0', 'error': None })
                     except Inconsistency as e:
+                        logger.debug(e, exc_info=True)
                         logger.error(e)
                         errors.append(e)
                         # Same as above: only adding the errored MDD once
