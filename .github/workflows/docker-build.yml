@@ -1,0 +1,30 @@
+name: "Docker build sdi-consistence-check"
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: "Checking out"
+        uses: "actions/checkout@v1"
+
+      - name: "build image"
+        run: |
+          make docker-build
+
+      - name: "Logging in docker.io"
+        if: github.repository == 'georchestra/sdi-consistence-check'
+        uses: azure/docker-login@v1
+        with:
+          username: '${{ secrets.DOCKER_HUB_USERNAME }}'
+          password: '${{ secrets.DOCKER_HUB_PASSWORD }}'
+
+      - name: "Push image to docker hub"
+        if: github.repository == 'georchestra/sdi-consistence-check'
+        run: |
+          TAG=$(git rev-parse --short HEAD)
+          docker push georchestra/sdi-consistence-check:$TAG
