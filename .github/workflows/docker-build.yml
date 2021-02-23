@@ -1,12 +1,11 @@
 name: "Docker build sdi-consistence-check"
 on:
-  pull_request:
+  push:
     branches:
       - master
 
 jobs:
   build:
-    if: github.event.pull_request.merged == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
