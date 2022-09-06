@@ -18,7 +18,7 @@ class CSWQuerier:
     max_records = 100
     is_dataset = PropertyIsEqualTo("Type", "dataset")
     is_service = PropertyIsEqualTo("Type", "service")
-    non_harvested = PropertyIsEqualTo("_isHarvested", "n")
+    non_harvested = PropertyIsEqualTo("isHarvested", "false")
 
     protocol_regexp = re.compile("^OGC:(?P<type>WMS|WFS)(?:-(?P<version>\d+(?:\.\d+)*)(?:-[\w-]+)?)?$", re.IGNORECASE)
 
@@ -42,40 +42,49 @@ class CSWQuerier:
         self.start = 0
         self.md_count = -1
 
-    def get_dataset_records(self):
-        self.csw.getrecords2(constraints=[self.is_dataset],
-                             esn='full',
-                             startposition=self.start,
-                             maxrecords=self.max_records)
-        self.logger.debug("CSWQuerier.get_records() results : %s (start=%s, max=%s)",
-                          self.csw.results, self.start, self.max_records)
+    def get_dataset_records(self, constraints=[]):
+        self.csw.getrecords2(
+            constraints=[And(constraints + [self.is_dataset])] if constraints else [self.is_dataset],
+            esn='full',
+            startposition=self.start,
+            maxrecords=self.max_records,
+        )
+        self.logger.debug(
+            "CSWQuerier.get_records() results : %s (start=%s, max=%s)",
+            self.csw.results,
+            self.start,
+            self.max_records,
+        )
         self.start += self.csw.results['returned']
         return self.csw.records
 
     def get_md(self, uuid):
         return self.csw.records[uuid]
 
-    def get_service_mds(self):
+    def get_service_mds(self, constraints=[]):
         # do not take care of FutureWarnings issued by OWSLib
         with warnings.catch_warnings():
-            self.csw.getrecords2(constraints=[self.is_service],
-                                 esn='full',
-                                 outputschema=namespaces['gmd'],
-                                 startposition=0,
-                                 maxrecords=1000000)
-
+            self.csw.getrecords2(
+                constraints=[And(constraints + [self.is_dataset])] if constraints else [self.is_service],
+                esn='full',
+                outputschema=namespaces['gmd'],
+                startposition=0,
+                maxrecords=1000000,
+            )
             return self.csw.records
 
 
-    def get_data_mds(self):
-        self.csw.getrecords2(constraints=[self.is_dataset],
-                             esn='full',
-                             outputschema=namespaces['gmd'],
-                             startposition=0,
-                             maxrecords=1000000)
+    def get_data_mds(self, constraints=[]):
+        self.csw.getrecords2(
+            constraints=[And(constraints + [self.is_dataset])] if constraints else [self.is_dataset],
+            esn='full',
+            outputschema=namespaces['gmd'],
+            startposition=0,
+            maxrecords=1000000,
+        )
         return self.csw.records
 
-    def get_all_records(self, constraint):
+    def get_all_records(self, constraints=[]):
         """
         Gets all records, also managing the pagination against the remote CSW server.
         :param constraint: the constraint array to be passed to OWSLib getrecords2.
@@ -84,16 +93,17 @@ class CSWQuerier:
         startpos = 0
         mds = {}
         while True:
-            self.csw.getrecords2(constraint,
-                                 esn='full',
-                                 outputschema=namespaces['gmd'],
-                                 startposition=startpos,
-                                 maxrecords=self.max_records)
+            self.csw.getrecords2(
+                constraints,
+                esn='full',
+                outputschema=namespaces['gmd'],
+                startposition=startpos,
+                maxrecords=self.max_records,
+            )
             for uuid in self.csw.records:
                 mds[uuid] = self.csw.records[uuid]
             startpos = len(mds) + 1
-            # end condition
-            if self.csw.results['nextrecord'] == 0:
+            if startpos > self.csw.results['matches']:
                 break
         return mds
 
