@@ -171,7 +171,7 @@ if __name__ == "__main__":
                 print_ows_report(ows_checker)
             if args.xunit:
                     generate_ows_xunit_layers_status(ows_checker, args.xunit_output)
-        except BaseException as e:
+        except Exception as e:
             logger.debug(e, exc_info=True)
             logger.info("Unable to parse the remote OWS server: %s", str(e))
 
@@ -268,7 +268,7 @@ if __name__ == "__main__":
                                 logger.info("    WFS url: OK")
                             else:
                                 logger.debug("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
-                        except BaseException as ex:
+                        except Exception as ex:
                             if isinstance(ex, GnToGsLayerNotFoundInconsistency) or \
                                 isinstance(ex, GnToGsInvalidCapabilitiesUrl) or    \
                                             isinstance(ex,GnToGsOtherError):

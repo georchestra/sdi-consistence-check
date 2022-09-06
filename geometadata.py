@@ -23,7 +23,7 @@ class GeoMetadata:
             raise GsToGnMetadataInvalidInconsistency(mdUrl,
                                                "'%s' Metadata not found (HTTP %s): %s"
                                                      % (mdFormat, e.response.status_code, str(e)))
-        except BaseException as e:
+        except Exception as e:
             raise GsToGnMetadataInvalidInconsistency(mdUrl,
                                                "Unable to parse the %s metadata: %s" % (mdFormat, str(e)))
 

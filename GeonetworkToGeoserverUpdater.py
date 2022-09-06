@@ -139,7 +139,7 @@ def gn_to_gs_fix(layer, resource, dry_run, credentials, no_ssl_check=False):
     md_attribution = None
     try:
         md_attribution = extract_attribution(md)
-    except BaseException as e:
+    except Exception as e:
         logger.debug("Unable to parse the metadata attribution: %s", str(e), exc_info=1)
     update_resource(layer, resource, md_title, md_abstract, md_url_html, md_attribution, dry_run)
 

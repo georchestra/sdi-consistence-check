@@ -33,7 +33,7 @@ class CSWQuerier:
         self.owsServices = cached_ows_services or CachedOwsServices(credentials=credentials, timeout=timeout)
         try:
             self.csw = CatalogueServiceWeb(url, username=username, password=password)
-        except BaseException as ex:
+        except Exception as ex:
             raise ServiceException(ex)
         self.mds_not_parsable = []
         self.reset()
