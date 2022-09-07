@@ -45,7 +45,7 @@ from utils import find_data_metadata, print_report, load_workspaces_mapping
 
 
 def init_mdd_mds_mapping(cswQuerier):
-  mds = cswQuerier.get_service_mds()
+  mds = cswQuerier.get_service_mds(constraints=[CSWQuerier.non_harvested])
   mdd_to_mds = {}
   for mduuid, md in mds.items():
       for mdd in md.serviceidentification.operateson:
@@ -99,7 +99,7 @@ def guess_related_service_metadata(gs_url, gn_url, workspace, service):
     """
     gn_cswurl = "%s/srv/eng/csw" % gn_url
     csw_q = CSWQuerier(gn_cswurl)
-    mds = csw_q.get_all_records(constraint=[csw_q.is_service, csw_q.non_harvested])
+    mds = csw_q.get_all_records(constraints=[And([csw_q.is_service, csw_q.non_harvested])])
     expected_service_url = workspace_service_url(gs_url, workspace, service)
     for smd_uuid, smd in mds.items():
         try:
@@ -313,7 +313,7 @@ if __name__ == "__main__":
     # to find a way to keep the MDD to MDS mapping for each of these catalogues.
     #
     #csw_q = None
-    #servicesmd = csw_q.get_all_records(constraint=csw_q.is_service)
+    #servicesmd = csw_q.get_all_records(constraints=[And([csw_q.is_service, csw_q.non_harvested])])
     #data_to_service_map = {}
     #for uuid, md in servicesmd.items():
     #    for oon in md.identificationinfo[0].operateson:

@@ -114,7 +114,7 @@ class CachedOwsServices:
            self._check_legit_getcapabilities_url(url, name, is_wms)
            try:
                 servers_cache[url] = OwsServer(url, is_wms, creds=self._credentials)
-           except BaseException as ex:
+           except Exception as ex:
                 raise GnToGsOtherError(layer_name=name,
                                        layer_url=url,
                                        exc=ex)
@@ -136,7 +136,7 @@ class OwsChecker:
         self.wms = wms
         try:
             self._service = OwsServer(serviceUrl, wms, creds, timeout=timeout)
-        except BaseException as e:
+        except Exception as e:
             raise UnparseableGetCapabilitiesInconsistency(serviceUrl, str(e))
 
         layer_idx = 0

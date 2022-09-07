@@ -8,6 +8,7 @@ from math import floor
 from time import strftime, localtime
 import xml.etree.cElementTree as ET
 
+from owslib.fes import And
 from owslib.util import ServiceException
 
 from credentials import Credentials
@@ -171,7 +172,7 @@ if __name__ == "__main__":
                 print_ows_report(ows_checker)
             if args.xunit:
                     generate_ows_xunit_layers_status(ows_checker, args.xunit_output)
-        except BaseException as e:
+        except Exception as e:
             logger.debug(e, exc_info=True)
             logger.info("Unable to parse the remote OWS server: %s", str(e))
 
@@ -190,9 +191,9 @@ if __name__ == "__main__":
         reporting = []
         if args.inspire == "strict":
             # Step 1: get all data metadata
-            datamd = csw_q.get_all_records(constraint=[csw_q.is_dataset])
+            datamd = csw_q.get_all_records(constraints=[And([csw_q.is_dataset, csw_q.non_harvested])])
             # Step 2: maps data metadatas to service MDs
-            servicesmd = csw_q.get_all_records(constraint=[csw_q.is_service])
+            servicesmd = csw_q.get_all_records(constraints=[And([csw_q.is_service, csw_q.non_harvested])])
             data_to_service_map = {}
             for uuid, md in servicesmd.items():
                 for oon in md.identificationinfo[0].operateson:
@@ -239,16 +240,18 @@ if __name__ == "__main__":
 
         elif args.inspire == "flexible":
             global_idx = 0
+            csw_q.start = 0
             while True:
-                res = csw_q.get_dataset_records()
-                if (len(res)) == 0:
-                    break
+
+                res = csw_q.get_dataset_records(constraints=[csw_q.non_harvested])
+
                 total_mds += len(res)
                 for idx, uuid in enumerate(res):
                     current_md = res[uuid]
                     logger.info("#%d\n  UUID : %s\n  %s", global_idx, uuid, current_md.title)
                     wms_found = False
                     wfs_found = False
+
                     for uri in csw_q.get_md(uuid).uris:
                         from_wms = False
                         try:
@@ -268,7 +271,7 @@ if __name__ == "__main__":
                                 logger.info("    WFS url: OK")
                             else:
                                 logger.debug("\tSkipping URI : %s %s %s", uri["protocol"], uri['url'], uri['name'])
-                        except BaseException as ex:
+                        except Exception as ex:
                             if isinstance(ex, GnToGsLayerNotFoundInconsistency) or \
                                 isinstance(ex, GnToGsInvalidCapabilitiesUrl) or    \
                                             isinstance(ex,GnToGsOtherError):
@@ -304,11 +307,14 @@ if __name__ == "__main__":
                     if wms_found and wfs_found:
                         reporting.append({ 'classname': 'CSW', 'name': current_md.title, 'uuid': uuid,
                                     'time': '0', 'error': None })
+
                     logger.info("")
                     # end of current md
                     global_idx += 1
-                if csw_q.csw.results['nextrecord'] == 0:
+
+                if csw_q.start > csw_q.csw.results['matches']:
                     break
+
         print_csw_report(errors, total_mds)
         if args.xunit:
             generate_csw_xunit_layers_status(reporting, args.xunit_output)

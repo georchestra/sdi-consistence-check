@@ -1,4 +1,4 @@
-class Inconsistency(BaseException):
+class Inconsistency(Exception):
     def fix(self):
         raise NotImplementedError('Not implemented')
 
