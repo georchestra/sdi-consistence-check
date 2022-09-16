@@ -6,7 +6,7 @@ owslib>=0.22,<0.23
 # This one should be, see https://github.com/boundlessgeo/gsconfig/issues/98#issuecomment-185063984
 gsconfig-py3
 
-mako==1.0.6
+mako==1.2.2
 
 # For unit tests
 nose
