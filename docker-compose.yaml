@@ -1,0 +1,29 @@
+services:
+
+  wms-consistence-check: &checker
+    image: georchestra/sdi-consistence-check:latest
+    volumes:
+      - ${PWD}:/app
+      - ${PWD}/.sdichecker:/home/snake/.sdichecker
+    entrypoint:
+      - python
+      - checker.py
+    command: >
+      --mode=WMS
+      --server=https://${FQDN}/geoserver/ows
+      --timeout=${TIMEOUT}
+
+  wfs-consistence-check:
+    <<: *checker
+    command: >
+      --mode=WFS
+      --server=https://${FQDN}/geoserver/ows
+      --timeout=${TIMEOUT}
+
+  csw-consistence-check:
+    <<: *checker
+    command: >
+      --mode=CSW
+      --server=https://${FQDN}/geonetwork/srv/fre/csw
+      --geoserver-to-check=${FQDN}
+      --timeout=${TIMEOUT}
