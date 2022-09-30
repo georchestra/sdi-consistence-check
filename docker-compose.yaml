@@ -3,7 +3,7 @@ services:
   wms-consistence-check: &checker
     image: georchestra/sdi-consistence-check:latest
     volumes:
-      - ${PWD}:/app
+      - ${PWD}/sdi-consistence-check:/app
       - ${PWD}/.sdichecker:/home/snake/.sdichecker
     entrypoint:
       - python
