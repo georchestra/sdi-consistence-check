@@ -1,7 +1,6 @@
 TAG=$(shell git rev-parse --short HEAD)
 
 docker-build:
-	docker pull python:3.5
 	docker build -t georchestra/sdi-consistence-check:latest .
 
 all: docker-build
