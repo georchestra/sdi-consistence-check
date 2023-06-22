@@ -5,7 +5,8 @@ import xml.etree.ElementTree as ET
 from contextlib import suppress
 from urllib.parse import urlparse
 
-from owslib.csw import CatalogueServiceWeb, namespaces
+from owslib import namespaces
+from owslib.csw import CatalogueServiceWeb
 from owslib.fes import PropertyIsEqualTo, Not, Or, And
 from owslib.util import ServiceException
 

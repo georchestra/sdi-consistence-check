@@ -6,6 +6,7 @@ def bypassSSLVerification():
     old_request_method = requests.request
 
     def new_request_method(method, url, headers=None, **kw):
+        del kw["verify"]
         return old_request_method(method, url, headers=headers, verify=False, **kw)
 
     requests.request = new_request_method
@@ -13,6 +14,7 @@ def bypassSSLVerification():
     old_post_method = requests.post
 
     def new_post_method(url, request, headers=None, **rkwargs):
+        del rkwargs["verify"]
         return old_post_method(url, request, headers=headers, verify=False, **rkwargs)
     requests.post = new_post_method
 
@@ -21,6 +23,7 @@ def bypassSSLVerification():
     old_get_method = Session.get
 
     def new_get_method(self, url, **kwargs):
+        del kwargs["verify"]
         return old_get_method(self, url, verify=False, **kwargs)
 
     Session.get = new_get_method
