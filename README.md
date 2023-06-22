@@ -132,6 +132,16 @@ git clone https://github.com/sigrennesmetropole/sdi-consistence-check.git
 cd sdi-consistence-check && docker build -t georchestra/sdi-consistence-check .
 ```
 
+## Development using docker
+
+For development you can run checks using the docker-compose file:
+
+```
+docker-compose run --rm [wms|wfs|csw]-consistence-check
+```
+
+Note that you can customise the `.env` file to run checks against any online georchestra deployment.
+
 ## Testing
 
 Nose is used for unit testing ; to launch the testsuite, just use the following command:

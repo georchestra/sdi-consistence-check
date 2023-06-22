@@ -26,5 +26,4 @@ jobs:
       - name: "Push image to docker hub"
         if: github.repository == 'georchestra/sdi-consistence-check'
         run: |
-          TAG=$(git rev-parse --short HEAD)
-          docker push georchestra/sdi-consistence-check:$TAG
+          make docker-push
