@@ -37,4 +37,4 @@ jobs:
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
         repository: georchestra/sdi-consistence-check
         readme-filepath: ./DOCKER_HUB.md
-        short-description: 'SDI consistence check module for geOrchestra SDI'
+        short-description: 'SDI consistence check module for the geOrchestra SDI'
