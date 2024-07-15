@@ -1,5 +1,4 @@
-import xml.etree.ElementTree as etree
-
+from owslib.etree import etree
 from owslib.iso import MD_Metadata
 from owslib.util import openURL
 from requests import HTTPError
