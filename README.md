@@ -25,7 +25,7 @@ optional arguments:
                         space-separated list of geoserver hostname to check in
                         CSW mode with inspire strict option activated. Ex:
                         sdi.georchestra.org
-  --check-layers        check WMS/WFS layer validity by performing sample WMS 
+  --check-layers        check WMS/WFS layer validity by performing sample WMS
                         GetMap or WFS GetFeature requests
   --disable-ssl-verification
                         Disable certificate verification
@@ -60,7 +60,9 @@ python3 checker.py --mode WMS --server https://www.geopicardie.fr/geoserver/wms
 ```
 
 
-In case a private service is to be checked, you should first create a `.sdichecker` in your home directory, with the following format:
+In case a private service is to be checked, you should first create a `.sdichecker`
+in your home directory, or define a `SDICHECKER_CREDS_PATH` environment variable,
+pointing to a file having the following format:
 ```
 <hostname> <username> <password>
 ```

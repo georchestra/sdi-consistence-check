@@ -8,11 +8,14 @@ class Credentials:
         Loads the credentials file, which consists of a text file
         formatted with "hostname username password" and whose default location is set to
         ~/.sdichecker.
+
+        The file path can also be defined using the SDICHECKER_CREDS_PATH environment variable.
         """
         self._credentials = {}
 
         try:
-            with open(os.getenv("HOME") + "/.sdichecker") as file:
+            pwfile = os.getenv("SDICHECKER_CREDS_PATH") or os.getenv("HOME") + "/.sdichecker"
+            with open(pwfile) as file:
                 for line in file:
                     try:
                         (hostname, user, password) = line.rstrip("\n").split(" ", 3)
@@ -21,7 +24,7 @@ class Credentials:
                         pass
         except FileNotFoundError:
             if logger is not None:
-                logger.info("No ~/.sdichecker file found, skipping credentials definition.")
+                logger.info("No sdichecker credentials file found, skipping credentials definition.")
             pass
 
     def add(self, site, username, password):
