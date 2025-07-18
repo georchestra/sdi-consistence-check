@@ -99,7 +99,7 @@ python3 checker.py --mode CSW --inspire=strict --geoserver-to-check sdi.georches
   --server https://sdi.georchestra.org/geonetwork/srv/fre/csw
 ```
 
-### Xunit format
+### Xunit format
 
 Xunit is an XML report output format used by several test frameworks, as Junit.
 using the options `--xunit` / `--xunit-output` will provide a report in this
