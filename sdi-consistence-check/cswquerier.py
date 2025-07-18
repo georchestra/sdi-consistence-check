@@ -21,7 +21,7 @@ class CSWQuerier:
     is_service = PropertyIsEqualTo("Type", "service")
     non_harvested = PropertyIsEqualTo("isHarvested", "false")
 
-    protocol_regexp = re.compile("^OGC:(?P<type>WMS|WFS)(?:-(?P<version>\d+(?:\.\d+)*)(?:-[\w-]+)?)?$", re.IGNORECASE)
+    protocol_regexp = re.compile(r"^OGC:(?P<type>WMS|WFS)(?:-(?P<version>\d+(?:\.\d+)*)(?:-[\w-]+)?)?$", re.IGNORECASE)
 
     def __init__(self, url, credentials=Credentials(),
                  cached_ows_services=None, logger=None, timeout=30):
